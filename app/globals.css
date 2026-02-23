@@ -1,0 +1,38 @@
+/* Import existing CSS files from the original project */
+@import url('../CSS/styles.css');
+@import url('../CSS/index-styles.css');
+@import url('../CSS/dashboard-styles.css');
+@import url('../CSS/review-modal-styles.css');
+@import url('../CSS/booking-modal-styles.css');
+@import url('../CSS/auth-alerts.css');
+@import url('../CSS/search-styles.css');
+
+/* Reset Next.js defaults */
+html,
+body {
+    background-color: #ffffff !important;
+    margin: 0;
+    padding: 0;
+}
+
+/* Override blue focus ring to brand orange */
+.form-input:focus {
+    border-color: #ff6b35 !important;
+    box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.15) !important;
+}
+
+/* Header button: prevent flex stretching */
+.btn-header {
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    width: auto !important;
+    white-space: nowrap;
+}
+
+/* Gender radio options gap */
+.form-group-inline {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 24px !important;
+}

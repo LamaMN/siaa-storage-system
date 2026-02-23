@@ -1,0 +1,10 @@
+{
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/profile/[userType]/[id]/route": "app/api/profile/[userType]/[id]/route.js",
+  "/api/seeker/[id]/bookings/route": "app/api/seeker/[id]/bookings/route.js",
+  "/api/seeker/[id]/statistics/route": "app/api/seeker/[id]/statistics/route.js",
+  "/api/spaces/route": "app/api/spaces/route.js",
+  "/login/page": "app/login/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/search/page": "app/search/page.js"
+}
