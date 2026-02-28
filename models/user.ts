@@ -5,6 +5,7 @@
 export type AccountStatus = 'Active' | 'Suspended' | 'Deactivated';
 export type Gender = 'Male' | 'Female' | 'Other';
 export type Language = 'ar' | 'en';
+export type CommunicationMethod = 'Email' | 'Phone' | 'SMS' | 'InApp';
 
 // ============================================================
 // Storage Seeker
@@ -20,6 +21,7 @@ export interface StorageSeeker {
     DateOfBirth: Date;
     Gender?: Gender;
     NationalID?: string;
+    CompanyName?: string;
     IsVerified: boolean;
     VerificationDate?: Date;
     AccountStatus: AccountStatus;
@@ -27,6 +29,7 @@ export interface StorageSeeker {
     PreferredLanguage: Language;
     PreferredLocations?: string;
     NotificationPreferences?: string;
+    PreferredCommunicationMethod?: CommunicationMethod;
     ContentType?: string;
     CreatedAt: Date;
     UpdatedAt: Date;
@@ -41,6 +44,7 @@ export interface CreateSeekerInput {
     dateOfBirth: string;
     gender?: Gender;
     nationalId?: string;
+    companyName?: string;
     preferredLanguage?: Language;
 }
 
@@ -48,8 +52,11 @@ export interface UpdateSeekerInput {
     firstName?: string;
     lastName?: string;
     phoneNumber?: string;
+    companyName?: string;
     preferredLanguage?: Language;
     preferredLocations?: string;
+    notificationPreferences?: string;
+    preferredCommunicationMethod?: CommunicationMethod;
 }
 
 // ============================================================
@@ -77,7 +84,8 @@ export interface StorageProvider {
     BankName?: string;
     IBAN?: string;
     CommissionRate: number;
-    PreferredCommunicationMethod?: 'Email' | 'Phone' | 'SMS' | 'InApp';
+    PreferredCommunicationMethod?: CommunicationMethod;
+    NotificationPreferences?: string;
     ContentType?: string;
     CreatedAt: Date;
     UpdatedAt: Date;
@@ -104,7 +112,9 @@ export interface UpdateProviderInput {
     bankAccountNumber?: string;
     bankName?: string;
     iban?: string;
-    preferredCommunicationMethod?: 'Email' | 'Phone' | 'SMS' | 'InApp';
+    preferredLanguage?: Language;
+    preferredCommunicationMethod?: CommunicationMethod;
+    notificationPreferences?: string;
 }
 
 // ============================================================

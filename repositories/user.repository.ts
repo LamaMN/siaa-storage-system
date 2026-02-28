@@ -33,14 +33,16 @@ export async function createSeeker(input: CreateSeekerInput): Promise<number> {
     const result = await execute(
         `INSERT INTO StorageSeekers (
       Email, Password, FirstName, LastName, PhoneNumber,
-      DateOfBirth, Gender, NationalID,
-      PreferredLanguage, ProfilePicture, ContentType
+      DateOfBirth, Gender, NationalID, CompanyName,
+      PreferredLanguage, ProfilePicture, ContentType,
+      NotificationPreferences, PreferredCommunicationMethod
     )
     OUTPUT INSERTED.SeekerID
     VALUES (
       @email, @password, @firstName, @lastName, @phoneNumber,
-      @dateOfBirth, @gender, @nationalId,
-      @preferredLanguage, 0x, NULL
+      @dateOfBirth, @gender, @nationalId, @companyName,
+      @preferredLanguage, 0x, NULL,
+      @notificationPreferences, @preferredCommunicationMethod
     )`,
         {
             email: input.email,
@@ -51,7 +53,10 @@ export async function createSeeker(input: CreateSeekerInput): Promise<number> {
             dateOfBirth: input.dateOfBirth,
             gender: input.gender || null,
             nationalId: input.nationalId || null,
+            companyName: input.companyName || null,
             preferredLanguage: input.preferredLanguage || 'ar',
+            notificationPreferences: JSON.stringify({ email: true, sms: true, push: true }),
+            preferredCommunicationMethod: 'Email',
         }
     );
 
@@ -65,8 +70,11 @@ export async function updateSeeker(id: number, input: UpdateSeekerInput): Promis
       FirstName = ISNULL(@firstName, FirstName),
       LastName = ISNULL(@lastName, LastName),
       PhoneNumber = ISNULL(@phoneNumber, PhoneNumber),
+      CompanyName = ISNULL(@companyName, CompanyName),
       PreferredLanguage = ISNULL(@preferredLanguage, PreferredLanguage),
       PreferredLocations = ISNULL(@preferredLocations, PreferredLocations),
+      NotificationPreferences = ISNULL(@notificationPreferences, NotificationPreferences),
+      PreferredCommunicationMethod = ISNULL(@preferredCommunicationMethod, PreferredCommunicationMethod),
       UpdatedAt = GETDATE()
     WHERE SeekerID = @id`,
         {
@@ -74,8 +82,11 @@ export async function updateSeeker(id: number, input: UpdateSeekerInput): Promis
             firstName: input.firstName || null,
             lastName: input.lastName || null,
             phoneNumber: input.phoneNumber || null,
+            companyName: input.companyName !== undefined ? (input.companyName || null) : null,
             preferredLanguage: input.preferredLanguage || null,
-            preferredLocations: input.preferredLocations || null,
+            preferredLocations: input.preferredLocations !== undefined ? (input.preferredLocations || null) : null,
+            notificationPreferences: input.notificationPreferences || null,
+            preferredCommunicationMethod: input.preferredCommunicationMethod || null,
         }
     );
 }
@@ -124,13 +135,15 @@ export async function createProvider(input: CreateProviderInput): Promise<number
         `INSERT INTO StorageProviders (
       Email, Password, FirstName, LastName, PhoneNumber,
       DateOfBirth, Gender, NationalID, BusinessName,
-      PreferredLanguage, ProfilePicture, ContentType
+      PreferredLanguage, ProfilePicture, ContentType,
+      NotificationPreferences, PreferredCommunicationMethod
     )
     OUTPUT INSERTED.ProviderID
     VALUES (
       @email, @password, @firstName, @lastName, @phoneNumber,
       @dateOfBirth, @gender, @nationalId, @businessName,
-      @preferredLanguage, 0x, NULL
+      @preferredLanguage, 0x, NULL,
+      @notificationPreferences, @preferredCommunicationMethod
     )`,
         {
             email: input.email,
@@ -143,6 +156,8 @@ export async function createProvider(input: CreateProviderInput): Promise<number
             nationalId: input.nationalId || null,
             businessName: input.businessName || null,
             preferredLanguage: input.preferredLanguage || 'ar',
+            notificationPreferences: JSON.stringify({ email: true, sms: true, push: true }),
+            preferredCommunicationMethod: 'Email',
         }
     );
 
@@ -160,6 +175,9 @@ export async function updateProvider(id: number, input: UpdateProviderInput): Pr
       BankAccountNumber = ISNULL(@bankAccountNumber, BankAccountNumber),
       BankName = ISNULL(@bankName, BankName),
       IBAN = ISNULL(@iban, IBAN),
+      PreferredLanguage = ISNULL(@preferredLanguage, PreferredLanguage),
+      PreferredCommunicationMethod = ISNULL(@preferredCommunicationMethod, PreferredCommunicationMethod),
+      NotificationPreferences = ISNULL(@notificationPreferences, NotificationPreferences),
       UpdatedAt = GETDATE()
     WHERE ProviderID = @id`,
         {
@@ -167,10 +185,13 @@ export async function updateProvider(id: number, input: UpdateProviderInput): Pr
             firstName: input.firstName || null,
             lastName: input.lastName || null,
             phoneNumber: input.phoneNumber || null,
-            businessName: input.businessName || null,
+            businessName: input.businessName !== undefined ? (input.businessName || null) : null,
             bankAccountNumber: input.bankAccountNumber || null,
             bankName: input.bankName || null,
             iban: input.iban || null,
+            preferredLanguage: input.preferredLanguage || null,
+            preferredCommunicationMethod: input.preferredCommunicationMethod || null,
+            notificationPreferences: input.notificationPreferences || null,
         }
     );
 }

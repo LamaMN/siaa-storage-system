@@ -10,18 +10,38 @@
       "page": "/",
       "matchers": [
         {
-          "regexp": "^/.*$",
-          "originalSource": "/:path*"
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/dashboard(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/dashboard/:path*"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/list-space(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/list-space/:path*"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/api\\/profile(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/api/profile/:path*"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/api\\/bookings(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/api/bookings/:path*"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/api\\/seeker(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/api/seeker/:path*"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/api\\/provider(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/api/provider/:path*"
         }
       ],
       "wasm": [],
       "assets": [],
       "env": {
-        "__NEXT_BUILD_ID": "development",
+        "__NEXT_BUILD_ID": "lEHmXcPI-PyTiq2g_JAK9",
         "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "PK7ZjO57sZLuThMwjFWH+3RnRYz6j48YKgYKhK2ilQc=",
-        "__NEXT_PREVIEW_MODE_ID": "77a17cee6a7b7a1b0fbc597b3ee77dd1",
-        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "edb889a5f89cb4a558ce9325e9620bf69cf691c1e35a7915566f1fabfbe67b16",
-        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "a9ef17d83e5b4399e03bd05aa8b25ff8bd4fa049ca196accd48be631077685cf"
+        "__NEXT_PREVIEW_MODE_ID": "960f828a5b5073732769c3b076d926c0",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "15371abd0d19ff6db3201e7b91d32e61049aca675a16ed97accfc7f5f22df35e",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "4a6156ebf138c9d5e400cc1f0fd15307ec8a94c55b07e7244dfd5dd199d6437a"
       }
     }
   },
