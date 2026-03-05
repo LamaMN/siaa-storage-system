@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Si'aa - Edit Space</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="../CSS/styles.css">
+    <style>
+        .edit-section {
+            padding: 40px 0;
+            background-color: #f8f9fa;
+            min-height: calc(100vh - 200px);
+        }
+
+        .edit-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .edit-title {
+            margin-bottom: 25px;
+            color: #333;
+            font-size: 24px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .form-section-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-section-title i {
+            color: #f39c12;
+        }
+
+        #map-picker {
+            height: 300px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .edit-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 30px;
+            border-top: 2px solid #eee;
+            padding-top: 20px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #f39c12;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <nav class="nav">
+                    <a href="dashboard.html">Dashboard</a>
+                    <a href="index.html#about">About</a>
+                </nav>
+                <div class="logo">
+                    <img src="../Media/Logo.png" alt="Si'aa Logo" class="logo-img">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Loading space details...</p>
+    </div>
+
+    <section class="edit-section">
+        <div class="container">
+            <div class="edit-card">
+                <h1 class="edit-title">Edit Storage Space</h1>
+
+                <form id="editSpaceForm" novalidate>
+                    <input type="hidden" id="spaceId" name="spaceId">
+
+                    <!-- Basic Info -->
+                    <div class="form-section">
+                        <h3 class="form-section-title"><i class="fa-solid fa-info-circle"></i> Basic Information</h3>
+                        <div class="form-group">
+                            <label for="listingTitle" class="form-label">Title *</label>
+                            <input id="listingTitle" name="title" type="text" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="listingDescription" class="form-label">Description *</label>
+                            <textarea id="listingDescription" name="description" class="form-input" rows="4"
+                                required></textarea>
+                        </div>
+                        <div class="step-row">
+                            <div class="form-group">
+                                <label for="listingType" class="form-label">Space Type *</label>
+                                <select id="listingType" name="spaceType" class="form-input" required>
+                                    <option value="room">Indoor room</option>
+                                    <option value="garage">Garage / parking</option>
+                                    <option value="warehouse">Warehouse corner</option>
+                                    <option value="outdoor">Outdoor covered area</option>
+                                    <option value="Basement">Basement</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="listingStatus" class="form-label">Status</label>
+                                <select id="listingStatus" name="status" class="form-input">
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Pending">Pending</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location -->
+                    <div class="form-section">
+                        <h3 class="form-section-title"><i class="fa-solid fa-location-dot"></i> Location</h3>
+                        <div class="step-row">
+                            <div class="form-group">
+                                <label for="listingCity" class="form-label">City *</label>
+                                <input id="listingCity" name="city" type="text" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="listingAddress" class="form-label">Full Address *</label>
+                                <input id="listingAddress" name="addressLine1" type="text" class="form-input" required>
+                            </div>
+                        </div>
+                        <div class="step-row">
+                            <div class="form-group">
+                                <label for="latitude" class="form-label">Latitude *</label>
+                                <input id="latitude" name="latitude" type="number" step="0.000001" class="form-input"
+                                    required>
+                            </div>
+                            <div class="form-group">
+                                <label for="longitude" class="form-label">Longitude *</label>
+                                <input id="longitude" name="longitude" type="number" step="0.000001" class="form-input"
+                                    required>
+                            </div>
+                        </div>
+                        <div id="map-picker"></div>
+                    </div>
+
+                    <!-- Size & Dimensions -->
+                    <div class="form-section">
+                        <h3 class="form-section-title"><i class="fa-solid fa-ruler-combined"></i> Size & Dimensions</h3>
+                        <div class="step-row four-grid">
+                            <div class="form-group">
+                                <label for="listingLength" class="form-label">Length (m)</label>
+                                <input id="listingLength" name="length" type="number" step="0.1" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="listingWidth" class="form-label">Width (m)</label>
+                                <input id="listingWidth" name="width" type="number" step="0.1" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="listingHeight" class="form-label">Height (m)</label>
+                                <input id="listingHeight" name="height" type="number" step="0.1" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="listingSize" class="form-label">Area (m²) *</label>
+                                <input id="listingSize" name="size" type="number" step="0.1" class="form-input"
+                                    required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Features -->
+                    <div class="form-section">
+                        <h3 class="form-section-title"><i class="fa-solid fa-star"></i> Features & Access</h3>
+                        <div class="chip-row">
+                            <label class="chip-option">
+                                <input type="checkbox" name="climateControlled" id="featClimate">
+                                <span>Climate-controlled</span>
+                            </label>
+                            <label class="chip-option">
+                                <input type="checkbox" name="securitySystem" id="featSecurity">
+                                <span>Security System</span>
+                            </label>
+                            <label class="chip-option">
+                                <input type="checkbox" name="cctvMonitored" id="featCCTV">
+                                <span>CCTV</span>
+                            </label>
+                            <label class="chip-option">
+                                <input type="checkbox" name="parkingAvailable" id="featParking">
+                                <span>Parking</span>
+                            </label>
+                            <label class="chip-option">
+                                <input type="checkbox" name="loadingAssistance" id="featLoading">
+                                <span>Loading Help</span>
+                            </label>
+                        </div>
+                        <div class="form-group" style="margin-top:15px;">
+                            <label for="accessType" class="form-label">Access Type</label>
+                            <select id="accessType" name="accessType" class="form-input">
+                                <option value="24/7">24/7 Access</option>
+                                <option value="BusinessHours">Business Hours</option>
+                                <option value="ByAppointment">By Appointment</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="restrictions" class="form-label">Restrictions / Prohibited Items</label>
+                            <textarea id="restrictions" name="restrictions" class="form-input" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Pricing -->
+                    <div class="form-section">
+                        <h3 class="form-section-title"><i class="fa-solid fa-tag"></i> Pricing (SAR)</h3>
+                        <div class="step-row three-grid">
+                            <div class="form-group">
+                                <label for="pricePerMonth" class="form-label">Monthly *</label>
+                                <input id="pricePerMonth" name="pricePerMonth" type="number" class="form-input"
+                                    required>
+                            </div>
+                            <div class="form-group">
+                                <label for="pricePerWeek" class="form-label">Weekly</label>
+                                <input id="pricePerWeek" name="pricePerWeek" type="number" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="pricePerDay" class="form-label">Daily</label>
+                                <input id="pricePerDay" name="pricePerDay" type="number" class="form-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="edit-actions">
+                        <a href="dashboard.html" class="btn btn-outline">Cancel</a>
+                        <button type="submit" class="btn btn-dark">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="../Media/Logo.png" alt="Si'aa Logo" class="footer-logo-img">
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="../Javascript/edit-space.js"></script>
+</body>
+
+</html>
