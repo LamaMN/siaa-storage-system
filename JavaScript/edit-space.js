@@ -94,6 +94,7 @@ function populateForm(space) {
     document.getElementById('listingStatus').value = space.Status || 'Active';
 
     document.getElementById('listingCity').value = space.City || '';
+    document.getElementById('listingNeighborhood').value = space.Neighborhood || '';
     document.getElementById('listingAddress').value = space.AddressLine1 || '';
     document.getElementById('latitude').value = space.Latitude || '';
     document.getElementById('longitude').value = space.Longitude || '';

@@ -14,13 +14,12 @@ export default function LoginPage() {
         const form = e.currentTarget;
         const email = (form.elements.namedItem('email') as HTMLInputElement).value;
         const password = (form.elements.namedItem('password') as HTMLInputElement).value;
-        const userType = (form.elements.namedItem('userType') as HTMLSelectElement).value;
 
         try {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, userType }),
+                body: JSON.stringify({ email, password }),
             });
 
             const data = await res.json();
@@ -118,13 +117,7 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
-                            <div className="form-group">
-                                <label htmlFor="userType" className="form-label">Account Type</label>
-                                <select id="userType" name="userType" className="form-input">
-                                    <option value="seeker">Storage Seeker</option>
-                                    <option value="provider">Storage Provider</option>
-                                </select>
-                            </div>
+                            {/* Removed Account Type Select */}
 
                             <div className="form-meta">
                                 <a href="/forgot-password" className="form-link">Forgot your password?</a>

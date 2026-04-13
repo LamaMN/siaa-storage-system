@@ -16,14 +16,24 @@ export async function GET(
             const seeker = await findSeekerById(userId);
             if (!seeker) return errorResponse('User not found', 404);
 
-            const { Password, ...profile } = seeker;
-            return successResponse({ profile });
+            const { Password, ProfilePicture, ...profile } = seeker;
+            return successResponse({ 
+                profile: {
+                    ...profile,
+                    hasProfilePicture: !!ProfilePicture
+                }
+            });
         } else if (userType === 'provider') {
             const provider = await findProviderById(userId);
             if (!provider) return errorResponse('User not found', 404);
 
-            const { Password, BankAccountNumber, IBAN, ...profile } = provider;
-            return successResponse({ profile });
+            const { Password, BankAccountNumber, IBAN, ProfilePicture, ...profile } = provider;
+            return successResponse({ 
+                profile: {
+                    ...profile,
+                    hasProfilePicture: !!ProfilePicture
+                }
+            });
         }
 
         return errorResponse('Invalid user type', 400);

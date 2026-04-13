@@ -1,5 +1,11 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
+import dynamic from 'next/dynamic';
+
+const SearchMap = dynamic(() => import('./SearchMap'), {
+    ssr: false,
+    loading: () => <div style={{ height: '280px', width: '100%', background: '#f7fafc', borderRadius: '14px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a0aec0' }}><p>Loading Map...</p></div>
+});
 
 interface SpaceResult {
     SpaceID: number;
@@ -10,6 +16,7 @@ interface SpaceResult {
     PricePerWeek?: number;
     PricePerDay?: number;
     City?: string;
+    Neighborhood?: string;
     AddressLine1?: string;
     AvgRating?: number;
     TotalReviews?: number;
@@ -31,6 +38,7 @@ export default function SearchPage() {
     const [spaces, setSpaces] = useState<SpaceResult[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const [modalSpace, setModalSpace] = useState<SpaceResult | null>(null);
 
     const [filters, setFilters] = useState({
         city: '',
@@ -54,14 +62,55 @@ export default function SearchPage() {
         sortBy: 'match',
     });
 
+    const [priceRange, setPriceRange] = useState({ min: 80, max: 5000 });
+    const [priceRangeLoading, setPriceRangeLoading] = useState(true);
+
     useEffect(() => {
+        let currentCity = '';
         const storedCity = localStorage.getItem('siaa_city');
         if (!storedCity) {
             setShowLocationModal(true);
         } else {
+            currentCity = storedCity;
             setSelectedCity(storedCity);
             setFilters(f => ({ ...f, city: storedCity }));
         }
+
+        // Fetch dynamic price range
+        fetch('/api/spaces/pricerange')
+            .then(res => res.json())
+            .then(data => {
+                if (data && typeof data.minPrice === 'number' && typeof data.maxPrice === 'number') {
+                    // Update boundaries and default the knob to maxPrice
+                    const min = Math.max(0, data.minPrice);
+                    const max = Math.max(min + 1, data.maxPrice);
+                    setPriceRange({ min, max });
+                    setFilters(f => ({ ...f, maxPrice: max }));
+
+                    // Trigger search with the fetched city and max price
+                    performSearch(undefined, currentCity, max);
+                } else {
+                    performSearch(undefined, currentCity);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                performSearch(undefined, currentCity);
+            })
+            .finally(() => setPriceRangeLoading(false));
+
+        const handleOpenModal = (e: Event) => {
+            const ce = e as CustomEvent;
+            const spaceId = ce.detail;
+            setSpaces(currentSpaces => {
+                const found = currentSpaces.find(s => s.SpaceID === spaceId);
+                if (found) setModalSpace(found);
+                return currentSpaces;
+            });
+        };
+        window.addEventListener('openSpaceModal', handleOpenModal);
+
+        return () => window.removeEventListener('openSpaceModal', handleOpenModal);
     }, []);
 
     function handleCitySelect(city: string) {
@@ -87,15 +136,18 @@ export default function SearchPage() {
         }));
     }
 
-    async function handleSearch(e: FormEvent) {
-        e.preventDefault();
+    async function performSearch(e?: FormEvent, overrideCity?: string, overrideMaxPrice?: number) {
+        if (e) e.preventDefault();
         setLoading(true);
         setHasSearched(true);
 
         const params = new URLSearchParams();
-        if (filters.city) params.set('city', filters.city);
+        const searchCity = overrideCity !== undefined ? overrideCity : filters.city;
+        const searchMaxPrice = overrideMaxPrice !== undefined ? overrideMaxPrice : filters.maxPrice;
+
+        if (searchCity) params.set('city', searchCity);
         if (filters.spaceType) params.set('spaceType', filters.spaceType);
-        if (filters.maxPrice) params.set('maxPrice', String(filters.maxPrice));
+        if (searchMaxPrice !== undefined) params.set('maxPrice', String(searchMaxPrice));
         if (filters.minSize) params.set('minSize', filters.minSize);
         if (filters.maxSize) params.set('maxSize', filters.maxSize);
         if (filters.climateControlled || filters.temperatureControlled || filters.humidityControlled) params.set('climateControlled', '1');
@@ -114,6 +166,10 @@ export default function SearchPage() {
         } finally {
             setLoading(false);
         }
+    }
+
+    function handleSearch(e: FormEvent) {
+        performSearch(e);
     }
 
     function renderStars(rating: number) {
@@ -247,17 +303,23 @@ export default function SearchPage() {
                                             <div className="filter-field__range-header">
                                                 <span className="filter-field__label">Price Range</span>
                                                 <span className="filter-field__range-values">
-                                                    <span>80 SAR</span><span>{filters.maxPrice} SAR</span>
+                                                    {priceRangeLoading ? (
+                                                        <span>- - -</span>
+                                                    ) : (
+                                                        <><span>{priceRange.min} SAR</span><span>{filters.maxPrice} SAR</span></>
+                                                    )}
                                                 </span>
                                             </div>
-                                            <input
-                                                type="range"
-                                                name="price_max"
-                                                min="80" max="5000" step="50"
-                                                value={filters.maxPrice}
-                                                onChange={e => setFilters(f => ({ ...f, maxPrice: parseInt(e.target.value) }))}
-                                                className="filter-range-input"
-                                            />
+                                            {!priceRangeLoading && (
+                                                <input
+                                                    type="range"
+                                                    name="price_max"
+                                                    min={priceRange.min} max={priceRange.max} step="50"
+                                                    value={filters.maxPrice || priceRange.max}
+                                                    onChange={e => setFilters(f => ({ ...f, maxPrice: parseInt(e.target.value) }))}
+                                                    className="filter-range-input"
+                                                />
+                                            )}
                                         </div>
 
                                         {/* Start Date */}
@@ -360,16 +422,8 @@ export default function SearchPage() {
                                         </label>
                                     </div>
 
-                                    <div className="ai-info-box">
-                                        <p className="ai-info-box__title">AI Recommendation</p>
-                                        <p className="ai-info-box__text">
-                                            Si&apos;aa analyzes your filters (size, price, features, and location) to generate{' '}
-                                            <strong>AI-based storage recommendations</strong>.
-                                        </p>
-                                    </div>
-
                                     <button type="submit" className="btn btn-dark btn-large filter-submit-btn">
-                                        {loading ? 'Searching...' : 'Search & Get Recommendations'}
+                                        {loading ? 'Searching...' : 'Search Spaces'}
                                     </button>
 
                                 </form>
@@ -396,6 +450,8 @@ export default function SearchPage() {
                                 </div>
                             </div>
 
+                            <SearchMap spaces={spaces} />
+
                             <div className="storage-results__list">
                                 {loading && (
                                     <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -413,45 +469,81 @@ export default function SearchPage() {
                                     </article>
                                 )}
                                 {!loading && spaces.map(space => (
-                                    <article className="storage-card" key={space.SpaceID}>
-                                        {space.FirstImageID && (
-                                            <div className="storage-card__image" style={{ marginBottom: '0.75rem' }}>
+                                    <article
+                                        className="storage-card is-visible"
+                                        key={space.SpaceID}
+                                        onClick={() => setModalSpace(space)}
+                                        style={{ padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; }}
+                                    >
+                                        <div className="storage-card__image" style={{ marginBottom: '10px' }}>
+                                            {space.FirstImageID ? (
                                                 <img
                                                     src={`/api/images/space/${space.FirstImageID}`}
                                                     alt={space.Title}
-                                                    style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px' }}
+                                                    style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }}
                                                 />
-                                            </div>
-                                        )}
-                                        <div className="storage-card__content">
-                                            <h3 style={{ margin: '0 0 0.25rem' }}>{space.Title}</h3>
-                                            <p style={{ color: '#666', fontSize: '0.875rem', margin: '0 0 0.5rem' }}>
-                                                <i className="fa-solid fa-location-dot"></i>{' '}
-                                                {space.City}{space.AddressLine1 ? ` · ${space.AddressLine1}` : ''}
-                                            </p>
-                                            <p style={{ margin: '0 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                {renderStars(space.AvgRating || 0)}
-                                                <span style={{ fontSize: '0.75rem', color: '#888' }}>
-                                                    ({space.TotalReviews || 0} reviews)
-                                                </span>
-                                            </p>
-                                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                                                {space.SpaceType && <span className="booking-tag">{space.SpaceType}</span>}
-                                                {space.ClimateControlled && <span className="booking-tag">🌡️ Climate</span>}
-                                                {space.SecuritySystem && <span className="booking-tag">🔒 Secure</span>}
-                                                {space.ParkingAvailable && <span className="booking-tag">🚗 Parking</span>}
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <strong style={{ fontSize: '1.1rem' }}>{space.PricePerMonth} SAR</strong>
-                                                    <span style={{ color: '#888', fontSize: '0.8rem' }}>/month</span>
-                                                    {space.PricePerDay && (
-                                                        <span style={{ color: '#888', fontSize: '0.75rem', display: 'block' }}>
-                                                            {space.PricePerDay} SAR/day
-                                                        </span>
-                                                    )}
+                                            ) : (
+                                                <div style={{ width: '100%', height: '140px', background: '#edf2f7', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#a0aec0' }}>
+                                                    <i className="fa-solid fa-image" style={{ fontSize: '24px', marginBottom: '4px' }}></i>
+                                                    <span style={{ fontSize: '12px' }}>No Image</span>
                                                 </div>
-                                                <a href={`/spaces/${space.SpaceID}`} className="btn btn-dark">Book Now</a>
+                                            )}
+                                        </div>
+                                        <div className="space-card-content">
+                                            <div className="space-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                                                <div>
+                                                    <h3 className="space-card-title" style={{ fontSize: '15px', fontWeight: 700, color: '#1a365d', margin: '0 0 2px 0' }}>{space.Title}</h3>
+                                                    <p className="space-card-location" style={{ fontSize: '12px', color: '#718096', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <i className="fa-solid fa-location-dot" style={{ color: '#ff6b35', fontSize: '11px' }}></i> {space.City}{space.AddressLine1 ? `, ${space.AddressLine1}` : ''}
+                                                    </p>
+                                                </div>
+                                                <div className="space-card-price" style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                    <span className="price-amount" style={{ display: 'block', fontSize: '18px', fontWeight: 800, color: '#ff6b35' }}>{space.PricePerMonth || '?'} SAR</span>
+                                                    <span className="price-unit" style={{ fontSize: '11px', color: '#a0aec0' }}>/ mo</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-card-meta" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                                <div className="space-meta-item" style={{ fontSize: '12px', color: '#4a5568', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <i className="fa-solid fa-star" style={{ color: '#ff6b35', fontSize: '10px' }}></i>
+                                                    {space.AvgRating ? space.AvgRating.toFixed(1) : 'New'} ({space.TotalReviews || 0})
+                                                </div>
+                                                <div className="space-meta-item" style={{ fontSize: '12px', color: '#4a5568', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <i className="fa-solid fa-box" style={{ color: '#ff6b35', fontSize: '10px' }}></i>
+                                                    {space.SpaceType} &middot; {space.Size} m²
+                                                </div>
+                                                {space.MatchScore !== undefined && (
+                                                    <div className="space-meta-item match-score" style={{ fontSize: '12px', color: '#e8750a', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
+                                                        <i className="fa-solid fa-bolt" style={{ color: '#ff6b35', fontSize: '10px' }}></i>
+                                                        {space.MatchScore}% Match
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="space-card-tags" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                                {space.ClimateControlled && <span className="space-tag" style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', background: '#fff5f0', color: '#ff6b35', border: '1px solid #ffd5c2' }}>🌡️ Climate</span>}
+                                                {space.SecuritySystem && <span className="space-tag" style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', background: '#fff5f0', color: '#ff6b35', border: '1px solid #ffd5c2' }}>🔒 Secure</span>}
+                                                {space.ParkingAvailable && <span className="space-tag" style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', background: '#fff5f0', color: '#ff6b35', border: '1px solid #ffd5c2' }}>🚗 Parking</span>}
+                                            </div>
+
+                                            <div className="space-card-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '10px', borderTop: '1px solid #f7fafc' }}>
+                                                <button
+                                                    className="btn btn-outline"
+                                                    style={{ padding: '6px 14px', fontSize: '13px', fontWeight: 600, borderRadius: '6px', background: '#f8fafc', color: '#4a5568', border: '1px solid #e2e8f0', cursor: 'pointer' }}
+                                                    onClick={(e) => { e.stopPropagation(); setModalSpace(space); }}
+                                                >
+                                                    View Details
+                                                </button>
+                                                <a
+                                                    href={`/booking?spaceId=${space.SpaceID}`}
+                                                    className="btn btn-dark"
+                                                    style={{ padding: '6px 14px', fontSize: '13px', fontWeight: 600, borderRadius: '6px', textDecoration: 'none', background: 'linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)', color: '#fff' }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    Book
+                                                </a>
                                             </div>
                                         </div>
                                     </article>
@@ -461,6 +553,116 @@ export default function SearchPage() {
                     </div>
                 </div>
             </section>
+
+            {/* Space Details Modal */}
+            {modalSpace && (
+                <div className="review-modal-overlay" onClick={() => setModalSpace(null)} style={{ zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="review-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px', width: '95%', padding: '0', background: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column' }}>
+
+                        {/* Top Section: Image (Left) + Details (Right) */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0' }}>
+                            {/* Left Side: Image */}
+                            <div style={{ flex: '1 1 300px', minHeight: '260px', background: '#edf2f7', position: 'relative' }}>
+                                {modalSpace.FirstImageID ? (
+                                    <img src={`/api/images/space/${modalSpace.FirstImageID}`} alt={modalSpace.Title} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                                ) : (
+                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a0aec0' }}>
+                                        <i className="fa-solid fa-image" style={{ fontSize: '48px' }}></i>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Right Side: Details */}
+                            <div style={{ flex: '2 1 400px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                                    <div>
+                                        <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#1a365d', margin: '0 0 8px 0', lineHeight: 1.2 }}>{modalSpace.Title}</h2>
+                                        <p style={{ color: '#4a5568', margin: '0', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <i className="fa-solid fa-location-dot" style={{ color: '#ff6b35' }}></i>
+                                            {modalSpace.City}{modalSpace.AddressLine1 ? `, ${modalSpace.AddressLine1}` : ''}
+                                        </p>
+                                    </div>
+                                    <button onClick={() => setModalSpace(null)} style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#a0aec0', cursor: 'pointer', flexShrink: 0 }}>&times;</button>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                    {modalSpace.SpaceType && (
+                                        <div>
+                                            <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</span>
+                                            <div style={{ fontSize: '15px', color: '#1a365d', fontWeight: 600 }}><i className="fa-solid fa-box" style={{ color: '#a0aec0', marginRight: '6px' }}></i>{modalSpace.SpaceType}</div>
+                                        </div>
+                                    )}
+                                    {modalSpace.Size && (
+                                        <div>
+                                            <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Size</span>
+                                            <div style={{ fontSize: '15px', color: '#1a365d', fontWeight: 600 }}><i className="fa-solid fa-ruler-combined" style={{ color: '#a0aec0', marginRight: '6px' }}></i>{modalSpace.Size} m²</div>
+                                        </div>
+                                    )}
+                                    {modalSpace.AvgRating !== undefined && (
+                                        <div>
+                                            <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rating</span>
+                                            <div style={{ fontSize: '15px', color: '#1a365d', fontWeight: 600 }}><i className="fa-solid fa-star" style={{ color: '#f59e0b', marginRight: '6px' }}></i>{modalSpace.AvgRating.toFixed(1)}</div>
+                                        </div>
+                                    )}
+                                    {modalSpace.MatchScore && (
+                                        <div>
+                                            <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Match</span>
+                                            <div style={{ fontSize: '15px', color: '#e8750a', fontWeight: 800 }}><i className="fa-solid fa-bolt" style={{ marginRight: '6px' }}></i>{modalSpace.MatchScore}%</div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div style={{ marginBottom: '24px' }}>
+                                    <span style={{ fontSize: '13px', color: '#4a5568', fontWeight: 700, display: 'block', marginBottom: '10px' }}>Included Amenities</span>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        {modalSpace.ClimateControlled && <span style={{ background: '#fff5f0', color: '#ff6b35', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: '1px solid #ffd5c2', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="fa-solid fa-snowflake"></i> Climate Controlled</span>}
+                                        {modalSpace.SecuritySystem && <span style={{ background: '#fff5f0', color: '#ff6b35', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: '1px solid #ffd5c2', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="fa-solid fa-shield-halved"></i> Secure Access</span>}
+                                        {modalSpace.ParkingAvailable && <span style={{ background: '#fff5f0', color: '#ff6b35', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: '1px solid #ffd5c2', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="fa-solid fa-car"></i> Parking Available</span>}
+                                        {!modalSpace.ClimateControlled && !modalSpace.SecuritySystem && !modalSpace.ParkingAvailable && <span style={{ color: '#a0aec0', fontSize: '14px', fontStyle: 'italic' }}>Basic Storage Space</span>}
+                                    </div>
+                                </div>
+
+                                {/* Compact Pricing Breakdown in the middle */}
+                                <div style={{ display: 'flex', gap: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '12px', paddingBottom: '8px', marginTop: 'auto' }}>
+                                    <div style={{ flex: '1', textAlign: 'center', borderRight: '1px solid #e2e8f0', paddingRight: '16px' }}>
+                                        <div style={{ fontSize: '11px', color: '#718096', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>Per Day</div>
+                                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#ff6b35' }}>{modalSpace.PricePerDay || Math.round((modalSpace.PricePerMonth || 0) / 30)} <span style={{ fontSize: '12px', fontWeight: 600, color: '#a0aec0' }}>SAR</span></div>
+                                    </div>
+
+                                    <div style={{ flex: '1', textAlign: 'center', borderRight: '1px solid #e2e8f0', paddingRight: '16px' }}>
+                                        <div style={{ fontSize: '11px', color: '#718096', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>Per Week</div>
+                                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#ff6b35' }}>{modalSpace.PricePerWeek || Math.round((modalSpace.PricePerMonth || 0) / 4)} <span style={{ fontSize: '12px', fontWeight: 600, color: '#a0aec0' }}>SAR</span></div>
+                                    </div>
+
+                                    <div style={{ flex: '1', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '11px', color: '#718096', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>Per Month</div>
+                                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#ff6b35' }}>{modalSpace.PricePerMonth || '?'} <span style={{ fontSize: '12px', fontWeight: 600, color: '#a0aec0' }}>SAR</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Bottom Footer: Just Total Price & Actions */}
+                        <div style={{ padding: '20px 24px', background: '#fafbfc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '13px', color: '#718096', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Price</span>
+                                <div>
+                                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#ff6b35' }}>{modalSpace.PricePerMonth || '?'}</span>
+                                    <span style={{ fontSize: '15px', fontWeight: 700, color: '#a0aec0', marginLeft: '4px' }}>SAR / mo</span>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button style={{ padding: '12px 24px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 700, fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setModalSpace(null)}>Cancel</button>
+                                <a href={`/booking?spaceId=${modalSpace.SpaceID}`} style={{ padding: '12px 32px', borderRadius: '10px', background: 'linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)', color: '#fff', fontWeight: 700, fontSize: '16px', textDecoration: 'none', display: 'inline-block', boxShadow: '0 4px 12px rgba(255,107,53,0.3)', transition: 'all 0.2s ease', border: 'none', cursor: 'pointer' }}>
+                                    Book Space Now
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            )}
 
             <footer className="footer">
                 <div className="container">

@@ -25,6 +25,16 @@ const nextConfig: NextConfig = {
             },
         ];
     },
+    async rewrites() {
+        return [
+            { source: '/booking', destination: '/HTML/booking.html' },
+            { source: '/payment', destination: '/HTML/payment.html' },
+            { source: '/confirmation', destination: '/HTML/confirmation.html' },
+            { source: '/booking.html', destination: '/HTML/booking.html' },
+            { source: '/payment.html', destination: '/HTML/payment.html' },
+            { source: '/confirmation.html', destination: '/HTML/confirmation.html' }
+        ];
+    },
     experimental: {
         serverActions: {
             allowedOrigins: ['localhost:3000'],

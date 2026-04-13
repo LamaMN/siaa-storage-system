@@ -54,7 +54,6 @@ export const registerProviderSchema = z.object({
 export const loginSchema = z.object({
     email: z.string().email(),
     password: z.string().min(1),
-    userType: z.enum(['seeker', 'provider']),
 });
 
 // ============================================================
@@ -133,80 +132,82 @@ export async function registerProvider(
 export async function login(
     data: z.infer<typeof loginSchema>
 ): Promise<{ token: string; user: object; isFirstLogin: boolean }> {
-    if (data.userType === 'seeker') {
-        const seeker = await findSeekerByEmail(data.email);
-        if (!seeker) throw new Error('Invalid email or password');
 
+    // 1. Try auth as Seeker
+    const seeker = await findSeekerByEmail(data.email);
+    if (seeker) {
         const valid = await verifyPassword(data.password, seeker.Password);
-        if (!valid) throw new Error('Invalid email or password');
+        if (valid) {
+            if (seeker.AccountStatus !== 'Active') {
+                throw new Error(`Account is ${seeker.AccountStatus.toLowerCase()}. Please contact support.`);
+            }
 
-        if (seeker.AccountStatus !== 'Active') {
-            throw new Error(`Account is ${seeker.AccountStatus.toLowerCase()}. Please contact support.`);
-        }
+            await updateSeekerLastLogin(seeker.SeekerID);
 
-        // Track last login
-        await updateSeekerLastLogin(seeker.SeekerID);
+            const isFirstLogin = !seeker.UpdatedAt ||
+                Math.abs(new Date(seeker.CreatedAt).getTime() - new Date(seeker.UpdatedAt).getTime()) < 5000;
 
-        const isFirstLogin = !seeker.UpdatedAt ||
-            Math.abs(new Date(seeker.CreatedAt).getTime() - new Date(seeker.UpdatedAt).getTime()) < 5000;
-
-        const payload: TokenPayload = {
-            id: seeker.SeekerID,
-            email: seeker.Email,
-            userType: 'seeker',
-            firstName: seeker.FirstName,
-        };
-
-        const token = await signToken(payload);
-
-        return {
-            token,
-            user: {
+            const payload: TokenPayload = {
                 id: seeker.SeekerID,
                 email: seeker.Email,
-                firstName: seeker.FirstName,
-                lastName: seeker.LastName,
                 userType: 'seeker',
-                accountStatus: seeker.AccountStatus,
-            },
-            isFirstLogin,
-        };
-    } else {
-        const provider = await findProviderByEmail(data.email);
-        if (!provider) throw new Error('Invalid email or password');
+                firstName: seeker.FirstName,
+            };
 
-        const valid = await verifyPassword(data.password, provider.Password);
-        if (!valid) throw new Error('Invalid email or password');
+            const token = await signToken(payload);
 
-        if (provider.AccountStatus !== 'Active') {
-            throw new Error(`Account is ${provider.AccountStatus.toLowerCase()}. Please contact support.`);
+            return {
+                token,
+                user: {
+                    id: seeker.SeekerID,
+                    email: seeker.Email,
+                    firstName: seeker.FirstName,
+                    lastName: seeker.LastName,
+                    userType: 'seeker',
+                    accountStatus: seeker.AccountStatus,
+                },
+                isFirstLogin,
+            };
         }
+    }
 
-        await updateProviderLastLogin(provider.ProviderID);
+    // 2. Try auth as Provider
+    const provider = await findProviderByEmail(data.email);
+    if (provider) {
+        const valid = await verifyPassword(data.password, provider.Password);
+        if (valid) {
+            if (provider.AccountStatus !== 'Active') {
+                throw new Error(`Account is ${provider.AccountStatus.toLowerCase()}. Please contact support.`);
+            }
 
-        const isFirstLogin = !provider.LastLoginDate;
+            await updateProviderLastLogin(provider.ProviderID);
+            const isFirstLogin = !provider.LastLoginDate;
 
-        const payload: TokenPayload = {
-            id: provider.ProviderID,
-            email: provider.Email,
-            userType: 'provider',
-            firstName: provider.FirstName,
-        };
-
-        const token = await signToken(payload);
-
-        return {
-            token,
-            user: {
+            const payload: TokenPayload = {
                 id: provider.ProviderID,
                 email: provider.Email,
-                firstName: provider.FirstName,
-                lastName: provider.LastName,
-                businessName: provider.BusinessName,
                 userType: 'provider',
-                accountStatus: provider.AccountStatus,
-            },
-            isFirstLogin,
-        };
+                firstName: provider.FirstName,
+            };
+
+            const token = await signToken(payload);
+
+            return {
+                token,
+                user: {
+                    id: provider.ProviderID,
+                    email: provider.Email,
+                    firstName: provider.FirstName,
+                    lastName: provider.LastName,
+                    businessName: provider.BusinessName,
+                    userType: 'provider',
+                    accountStatus: provider.AccountStatus,
+                },
+                isFirstLogin,
+            };
+        }
     }
+
+    // If neither matched or password failed for both
+    throw new Error('Invalid email or password');
 }

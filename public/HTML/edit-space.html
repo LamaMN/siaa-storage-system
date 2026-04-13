@@ -177,9 +177,29 @@
                                 <input id="listingCity" name="city" type="text" class="form-input" required>
                             </div>
                             <div class="form-group">
-                                <label for="listingAddress" class="form-label">Full Address *</label>
-                                <input id="listingAddress" name="addressLine1" type="text" class="form-input" required>
+                                <label for="listingNeighborhood" class="form-label">Neighborhood *</label>
+                                <input id="listingNeighborhood" name="neighborhood" list="neighborhoods" class="form-input" placeholder="Type or select a neighborhood" required>
+                                <datalist id="neighborhoods">
+                                    <option value="Al-Salama">
+                                    <option value="Al-Rawdah">
+                                    <option value="Al-Nahda">
+                                    <option value="Al-Andalus">
+                                    <option value="Al-Hamra">
+                                    <option value="Al-Rehab">
+                                    <option value="Al-Faisaliyah">
+                                    <option value="Al-Naeem">
+                                    <option value="Al-Basateen">
+                                    <option value="Al-Shati (Corniche)">
+                                    <option value="Al-Safa">
+                                    <option value="Al-Aziziyah">
+                                    <option value="Al-Baghdadiyah">
+                                    <option value="Al-Balad">
+                                </datalist>
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="listingAddress" class="form-label">Full Address *</label>
+                            <input id="listingAddress" name="addressLine1" type="text" class="form-input" required>
                         </div>
                         <div class="step-row">
                             <div class="form-group">

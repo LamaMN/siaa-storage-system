@@ -68,11 +68,23 @@
 
                     <div class="payment-form-group">
                         <label for="expiryDate" class="payment-form-label">
-                            Expirity Date
+                            Expiry Date
                             <span class="info-icon" title="Expiration date in MM/YY format">i</span>
                         </label>
-                        <input type="text" id="expiryDate" name="expiryDate" class="payment-input" placeholder="MM / YY"
-                              required>
+                        <input
+                            type="text"
+                            id="expiryDate"
+                            name="expiryDate"
+                            class="payment-input"
+                            placeholder="MM / YY"
+                            maxlength="5"
+                            inputmode="numeric"
+                            oninput="
+                                let v = this.value.replace(/[^0-9]/g,'');
+                                if(v.length >= 2) v = v.slice(0,2) + '/' + v.slice(2);
+                                this.value = v;
+                            "
+                            required>
                     </div>
 </div>
                     <button type="submit" class="complete-payment-btn">Complete Payment</button>

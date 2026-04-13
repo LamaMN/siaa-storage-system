@@ -31,6 +31,7 @@ export interface StorageSeeker {
     NotificationPreferences?: string;
     PreferredCommunicationMethod?: CommunicationMethod;
     ContentType?: string;
+    ProfilePicture?: Buffer;
     CreatedAt: Date;
     UpdatedAt: Date;
 }
@@ -87,6 +88,7 @@ export interface StorageProvider {
     PreferredCommunicationMethod?: CommunicationMethod;
     NotificationPreferences?: string;
     ContentType?: string;
+    ProfilePicture?: Buffer;
     CreatedAt: Date;
     UpdatedAt: Date;
 }

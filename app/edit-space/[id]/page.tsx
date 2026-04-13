@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, use } from 'react';
 import dynamic from 'next/dynamic';
 
-const LocationMap = dynamic(() => import('./LocationMap'), {
+const LocationMap = dynamic(() => import('../../list-space/LocationMap'), {
     ssr: false,
     loading: () => <div style={{ height: '300px', background: '#f7fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px' }}>Loading map...</div>
 });
@@ -13,15 +13,17 @@ interface User {
     firstName: string;
 }
 
-export default function ListSpacePage() {
+export default function EditSpacePage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState('');
     const [currentStep, setCurrentStep] = useState(1);
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [spaceLoading, setSpaceLoading] = useState(true);
 
-    // Form State
+    // Form State – mirrors list-space
     const [formData, setFormData] = useState({
         // Step 1
         listingTitle: '',
@@ -45,8 +47,6 @@ export default function ListSpacePage() {
         featCCTV: false,
         featLighting: false,
         prohibitedItems: '',
-        listingPhotos: null as FileList | null,
-        listingVideo: null as FileList | null,
 
         // Step 3
         accessType: '24-7',
@@ -75,36 +75,83 @@ export default function ListSpacePage() {
         }
         const u = JSON.parse(storedUser);
         if (u.userType !== 'provider') {
-            alert('Only providers can list spaces');
+            alert('Only providers can edit spaces');
             window.location.href = '/dashboard';
             return;
         }
         setUser(u);
         setToken(storedToken);
-    }, []);
+
+        // Fetch existing space and pre-fill form
+        fetch(`/api/spaces/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.space) {
+                    const s = data.space;
+
+                    // Reverse-map access type value
+                    let accessType = '24-7';
+                    if (s.AccessType === 'BusinessHours' || s.AccessType === 'business-hours') accessType = 'business-hours';
+                    else if (s.AccessType === 'ByAppointment' || s.AccessType === 'by-appointment') accessType = 'by-appointment';
+
+                    setFormData({
+                        listingTitle: s.Title || '',
+                        listingNeighborhood: s.AddressLine2 || '',
+                        listingAddress: s.AddressLine1 || '',
+                        latitude: s.Latitude != null ? String(s.Latitude) : '',
+                        longitude: s.Longitude != null ? String(s.Longitude) : '',
+                        listingType: s.SpaceType || '',
+                        listingSize: s.Size != null ? String(s.Size) : '',
+                        listingLength: s.Length != null ? String(s.Length) : '',
+                        listingWidth: s.Width != null ? String(s.Width) : '',
+                        listingHeight: s.Height != null ? String(s.Height) : '',
+                        listingDescription: s.Description || '',
+
+                        featTemperature: !!s.ClimateControlled,
+                        featClimate: !!s.ClimateControlled,
+                        featHumidity: false,
+                        featDry: false,
+                        featSecureAccess: !!s.SecuritySystem,
+                        featCCTV: !!s.CctvMonitored,
+                        featLighting: false,
+                        prohibitedItems: s.Restrictions || '',
+
+                        accessType,
+                        availableFrom: s.AvailableFrom || '',
+                        availableTo: s.AvailableTo || '',
+                        pricePerDay: s.PricePerDay != null ? String(s.PricePerDay) : '',
+                        pricePerWeek: s.PricePerWeek != null ? String(s.PricePerWeek) : '',
+                        pricePerMonth: s.PricePerMonth != null ? String(s.PricePerMonth) : '',
+                        accessNotes: s.AccessNotes || '',
+
+                        listingStatus: (s.Status || 'active').toLowerCase(),
+                    });
+                } else {
+                    setError('Space not found');
+                }
+            })
+            .catch(() => setError('Failed to load space'))
+            .finally(() => setSpaceLoading(false));
+    }, [id]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target as any;
         if (type === 'checkbox') {
             setFormData(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
-        } else if (type === 'file') {
-            setFormData(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).files }));
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
 
+    const goToStep = (step: number) => {
+        setCurrentStep(step);
+        window.scrollTo(0, 0);
+    };
+
     const nextStep = () => {
-        // Simple validations
         if (currentStep === 1) {
             if (!formData.listingTitle || !formData.listingNeighborhood || !formData.listingAddress || !formData.latitude || !formData.longitude || !formData.listingType || !formData.listingLength || !formData.listingWidth || !formData.listingHeight || !formData.listingDescription) {
                 alert('Please fill out all required fields in Step 1.');
-                return;
-            }
-        }
-        if (currentStep === 2) {
-            if (!formData.listingPhotos || formData.listingPhotos.length < 3) {
-                alert('Please upload at least 3 photos.');
                 return;
             }
         }
@@ -123,7 +170,7 @@ export default function ListSpacePage() {
         window.scrollTo(0, 0);
     };
 
-    async function handleSubmit(e: FormEvent) {
+    async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError('');
         setSuccess('');
@@ -158,11 +205,13 @@ export default function ListSpacePage() {
             pricePerMonth: parseFloat(formData.pricePerMonth),
             pricePerWeek: formData.pricePerWeek ? parseFloat(formData.pricePerWeek) : undefined,
             pricePerDay: formData.pricePerDay ? parseFloat(formData.pricePerDay) : undefined,
+
+            status: formData.listingStatus,
         };
 
         try {
-            const res = await fetch('/api/spaces', {
-                method: 'POST',
+            const res = await fetch(`/api/spaces/${id}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
@@ -173,12 +222,11 @@ export default function ListSpacePage() {
             const response = await res.json();
 
             if (!res.ok) {
-                setError(response.error || 'Failed to list space');
+                setError(response.error || 'Failed to update space');
                 return;
             }
 
-            setSuccess('Your space has been listed 🎉 We’ve saved your listing. You can edit details or upload more photos later from your dashboard.');
-            (document.getElementById('listingForm') as HTMLFormElement)?.reset();
+            setSuccess('Your space has been updated successfully!');
         } catch {
             setError('Network error. Please try again.');
         } finally {
@@ -186,7 +234,8 @@ export default function ListSpacePage() {
         }
     }
 
-    if (!user) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+    if (!user || spaceLoading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+    if (error && spaceLoading === false && !formData.listingTitle) return <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>{error}</div>;
 
     return (
         <>
@@ -210,16 +259,19 @@ export default function ListSpacePage() {
                 <div className="container">
                     {success ? (
                         <div className="listing-confirmation" style={{ display: 'block' }}>
-                            <h3>Your space has been listed 🎉</h3>
-                            <p>We’ve saved your listing. You can edit details or upload more photos later from your dashboard.</p>
-                            <a href="/dashboard" className="btn btn-dark" style={{ marginTop: '1rem', display: 'inline-block' }}>Go to Dashboard</a>
+                            <h3>Space updated successfully! ✅</h3>
+                            <p>Your changes have been saved. You can continue editing or return to your dashboard.</p>
+                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                                <a href="/dashboard" className="btn btn-dark" style={{ display: 'inline-block' }}>Go to Dashboard</a>
+                                <button className="btn btn-outline" onClick={() => setSuccess('')} style={{ display: 'inline-block' }}>Continue Editing</button>
+                            </div>
                         </div>
                     ) : (
                         <>
                             <div className="listing-header">
-                                <h1 className="listing-title">List a New Storage Space</h1>
+                                <h1 className="listing-title">Edit Your Storage Space</h1>
                                 <p className="listing-subtitle">
-                                    Add your space in a few guided steps. We’ll help you set details, environment, access, and publish your listing.
+                                    Update your space details below. Navigate between steps to make changes and save when you're done.
                                 </p>
                             </div>
 
@@ -232,33 +284,33 @@ export default function ListSpacePage() {
                             <div className="listing-layout">
                                 <div className="steps-card">
                                     <div className="steps-row">
-                                        <div className={`step-pill ${currentStep === 1 ? 'is-active' : ''}`}>
+                                        <div className={`step-pill ${currentStep === 1 ? 'is-active' : ''}`} onClick={() => goToStep(1)} style={{ cursor: 'pointer' }}>
                                             <span className="step-number">1</span>
                                             <span className="step-label">Basic Details</span>
                                         </div>
-                                        <div className={`step-pill ${currentStep === 2 ? 'is-active' : ''}`}>
+                                        <div className={`step-pill ${currentStep === 2 ? 'is-active' : ''}`} onClick={() => goToStep(2)} style={{ cursor: 'pointer' }}>
                                             <span className="step-number">2</span>
-                                            <span className="step-label">Environment & Media</span>
+                                            <span className="step-label">Environment &amp; Media</span>
                                         </div>
-                                        <div className={`step-pill ${currentStep === 3 ? 'is-active' : ''}`}>
+                                        <div className={`step-pill ${currentStep === 3 ? 'is-active' : ''}`} onClick={() => goToStep(3)} style={{ cursor: 'pointer' }}>
                                             <span className="step-number">3</span>
-                                            <span className="step-label">Access & Pricing</span>
+                                            <span className="step-label">Access &amp; Pricing</span>
                                         </div>
-                                        <div className={`step-pill ${currentStep === 4 ? 'is-active' : ''}`}>
+                                        <div className={`step-pill ${currentStep === 4 ? 'is-active' : ''}`} onClick={() => goToStep(4)} style={{ cursor: 'pointer' }}>
                                             <span className="step-number">4</span>
-                                            <span className="step-label">Review & Publish</span>
+                                            <span className="step-label">Review &amp; Save</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="listing-card">
-                                    <form id="listingForm" className="listing-form" onSubmit={handleSubmit}>
+                                    <form id="editListingForm" className="listing-form" onSubmit={handleSubmit}>
 
                                         {/* STEP 1 */}
                                         {currentStep === 1 && (
                                             <div className="step-panel is-active">
                                                 <h2 className="step-title">Basic space details</h2>
-                                                <p className="step-description">Tell guests what type of space you’re offering and where it is.</p>
+                                                <p className="step-description">Update the type, location, and dimensions of your space.</p>
 
                                                 <div className="step-row">
                                                     <div className="form-group">
@@ -354,7 +406,7 @@ export default function ListSpacePage() {
                                                 </div>
 
                                                 <div className="step-actions">
-                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>Next: Environment & Media</button>
+                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>Next: Environment &amp; Media</button>
                                                 </div>
                                             </div>
                                         )}
@@ -362,8 +414,8 @@ export default function ListSpacePage() {
                                         {/* STEP 2 */}
                                         {currentStep === 2 && (
                                             <div className="step-panel is-active">
-                                                <h2 className="step-title">Environment & media</h2>
-                                                <p className="step-description">Set environmental conditions and upload photos / video of your space.</p>
+                                                <h2 className="step-title">Environment &amp; media</h2>
+                                                <p className="step-description">Update environmental conditions and security features.</p>
 
                                                 <div className="form-group">
                                                     <span className="form-label">Environmental conditions (choose all that apply)</span>
@@ -388,7 +440,7 @@ export default function ListSpacePage() {
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <span className="form-label">Security & convenience</span>
+                                                    <span className="form-label">Security &amp; convenience</span>
                                                     <div className="chip-row">
                                                         <label className="chip-option">
                                                             <input type="checkbox" name="featSecureAccess" checked={formData.featSecureAccess} onChange={handleInputChange} />
@@ -411,20 +463,20 @@ export default function ListSpacePage() {
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <label className="form-label">Upload photos *</label>
-                                                    <input name="listingPhotos" type="file" accept="image/*" multiple className="form-input" onChange={handleInputChange} />
-                                                    <p className="step-note">Minimum 3, maximum 15 images per listing.</p>
+                                                    <label className="form-label">Upload new photos (optional)</label>
+                                                    <input name="listingPhotos" type="file" accept="image/*" multiple className="form-input" />
+                                                    <p className="step-note">Leave empty to keep existing photos. Upload new ones to replace them.</p>
                                                 </div>
 
                                                 <div className="form-group">
                                                     <label className="form-label">Optional video tour</label>
-                                                    <input name="listingVideo" type="file" accept="video/*" className="form-input" onChange={handleInputChange} />
+                                                    <input name="listingVideo" type="file" accept="video/*" className="form-input" />
                                                     <p className="step-note">Short video showing how to access and use the space (optional).</p>
                                                 </div>
 
                                                 <div className="step-actions step-actions--split">
                                                     <button type="button" className="btn btn-outline prev-btn" onClick={prevStep}>Back</button>
-                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>Next: Access & Pricing</button>
+                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>Next: Access &amp; Pricing</button>
                                                 </div>
                                             </div>
                                         )}
@@ -432,8 +484,8 @@ export default function ListSpacePage() {
                                         {/* STEP 3 */}
                                         {currentStep === 3 && (
                                             <div className="step-panel is-active">
-                                                <h2 className="step-title">Access & pricing</h2>
-                                                <p className="step-description">Define how and when renters can access the space and set your price.</p>
+                                                <h2 className="step-title">Access &amp; pricing</h2>
+                                                <p className="step-description">Update how renters access the space and adjust your price.</p>
 
                                                 <div className="form-group">
                                                     <span className="form-label">Access method *</span>
@@ -488,7 +540,7 @@ export default function ListSpacePage() {
 
                                                 <div className="step-actions step-actions--split">
                                                     <button type="button" className="btn btn-outline prev-btn" onClick={prevStep}>Back</button>
-                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>Next: Review & Publish</button>
+                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>Next: Review &amp; Save</button>
                                                 </div>
                                             </div>
                                         )}
@@ -496,26 +548,21 @@ export default function ListSpacePage() {
                                         {/* STEP 4 */}
                                         {currentStep === 4 && (
                                             <div className="step-panel is-active">
-                                                <h2 className="step-title">Review & publish</h2>
-                                                <p className="step-description">Check your information before publishing your listing.</p>
+                                                <h2 className="step-title">Review &amp; save</h2>
+                                                <p className="step-description">Check your updated information before saving.</p>
 
                                                 <div className="summary-box">
                                                     <h3>{formData.listingTitle || 'Untitled Listing'}</h3>
                                                     <p><strong>Location:</strong> {formData.listingAddress}, {formData.listingNeighborhood}</p>
                                                     <p><strong>Type:</strong> {formData.listingType} ({calculatedArea} m²)</p>
                                                     <p><strong>Price:</strong> {formData.pricePerMonth} SAR/month</p>
+                                                    <p><strong>Access:</strong> {formData.accessType}</p>
                                                     <br />
-                                                    <p className="step-note">When you click "List space", your listing will be submitted and shown to renters searching in your neighborhood.</p>
+                                                    <p className="step-note">Click "Save Changes" to apply your updates.</p>
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <span className="form-label">Ownership Verification Document *</span>
-                                                    <input name="listingVerification" type="file" accept=".pdf,image/*" className="form-input" onChange={handleInputChange} required />
-                                                    <p className="step-note">Upload a deed, leasing contract, or authorization proof for security verification.</p>
-                                                </div>
-
-                                                <div className="form-group">
-                                                    <span className="form-label">Initial listing status *</span>
+                                                    <span className="form-label">Listing status *</span>
                                                     <div className="chip-row">
                                                         <label className="chip-option">
                                                             <input type="radio" name="listingStatus" value="active" checked={formData.listingStatus === 'active'} onChange={handleInputChange} required />
@@ -530,7 +577,7 @@ export default function ListSpacePage() {
 
                                                 <div className="step-actions step-actions--split">
                                                     <button type="button" className="btn btn-outline prev-btn" onClick={prevStep} disabled={loading}>Back</button>
-                                                    <button type="submit" className="btn btn-dark" disabled={loading}>{loading ? 'Listing Space...' : 'List Space'}</button>
+                                                    <button type="submit" className="btn btn-dark" disabled={loading}>{loading ? 'Saving...' : 'Save Changes'}</button>
                                                 </div>
                                             </div>
                                         )}

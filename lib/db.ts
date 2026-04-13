@@ -72,21 +72,7 @@ async function query<T = Record<string, unknown>>(
 
     if (params) {
         for (const [key, value] of Object.entries(params)) {
-            if (value === null || value === undefined) {
-                request.input(key, sql.NVarChar(sql.MAX), null);
-            } else if (typeof value === 'number') {
-                if (Number.isInteger(value)) {
-                    request.input(key, sql.Int, value);
-                } else {
-                    request.input(key, sql.Float, value);
-                }
-            } else if (typeof value === 'boolean') {
-                request.input(key, sql.Bit, value ? 1 : 0);
-            } else if (value instanceof Date) {
-                request.input(key, sql.DateTime, value);
-            } else {
-                request.input(key, sql.NVarChar(sql.MAX), String(value));
-            }
+            request.input(key, value);
         }
     }
 
@@ -117,23 +103,7 @@ async function execute(
 
     if (params) {
         for (const [key, value] of Object.entries(params)) {
-            if (value === null || value === undefined) {
-                request.input(key, sql.NVarChar(sql.MAX), null);
-            } else if (typeof value === 'number') {
-                if (Number.isInteger(value)) {
-                    request.input(key, sql.Int, value);
-                } else {
-                    request.input(key, sql.Float, value);
-                }
-            } else if (typeof value === 'boolean') {
-                request.input(key, sql.Bit, value ? 1 : 0);
-            } else if (value instanceof Date) {
-                request.input(key, sql.DateTime, value);
-            } else if (value instanceof Buffer) {
-                request.input(key, sql.VarBinary(sql.MAX), value);
-            } else {
-                request.input(key, sql.NVarChar(sql.MAX), String(value));
-            }
+            request.input(key, value);
         }
     }
 
