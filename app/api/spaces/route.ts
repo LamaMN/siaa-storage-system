@@ -3,6 +3,7 @@ import { searchAndRecommendSpaces } from '@/services/space.service';
 import { createSpaceSchema, createNewSpace } from '@/services/space.service';
 import { errorResponse, successResponse, parsePagination } from '@/lib/api-helpers';
 import type { SpaceSearchFilters } from '@/models/space';
+import { verifyToken, extractTokenFromHeader } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
     try {
@@ -34,8 +35,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const providerId = parseInt(request.headers.get('x-user-id') || '0', 10);
-        const userType = request.headers.get('x-user-type');
+        const authHeader = request.headers.get('authorization');
+        const token = extractTokenFromHeader(authHeader);
+        if (!token) return errorResponse('Unauthorized', 401);
+
+        const payload = await verifyToken(token);
+        const providerId = payload.id;
+        const userType = payload.userType;
 
         if (!providerId || userType !== 'provider') {
             return errorResponse('Only providers can create spaces', 403);

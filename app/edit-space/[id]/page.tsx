@@ -22,6 +22,7 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [spaceLoading, setSpaceLoading] = useState(true);
+    const [selectedPhotos, setSelectedPhotos] = useState<FileList | null>(null);
 
     // Form State – mirrors list-space
     const [formData, setFormData] = useState({
@@ -138,6 +139,8 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
         const { name, value, type } = e.target as any;
         if (type === 'checkbox') {
             setFormData(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
+        } else if (type === 'file') {
+            setSelectedPhotos((e.target as HTMLInputElement).files);
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
@@ -226,7 +229,25 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                 return;
             }
 
-            setSuccess('Your space has been updated successfully!');
+            // Upload new photos if any were selected
+            if (selectedPhotos && selectedPhotos.length > 0) {
+                const photoForm = new FormData();
+                for (let i = 0; i < selectedPhotos.length; i++) {
+                    photoForm.append(`image${i}`, selectedPhotos[i]);
+                }
+                const imgRes = await fetch(`/api/spaces/${id}/images`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: photoForm,
+                });
+                if (!imgRes.ok) {
+                    setSuccess('Space updated, but photo upload failed. Try again from this page.');
+                    return;
+                }
+                setSelectedPhotos(null);
+            }
+
+            setSuccess('Your space has been updated successfully! Photos saved.');
         } catch {
             setError('Network error. Please try again.');
         } finally {
@@ -464,8 +485,14 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
 
                                                 <div className="form-group">
                                                     <label className="form-label">Upload new photos (optional)</label>
-                                                    <input name="listingPhotos" type="file" accept="image/*" multiple className="form-input" />
-                                                    <p className="step-note">Leave empty to keep existing photos. Upload new ones to replace them.</p>
+                                                    <input name="listingPhotos" type="file" accept="image/*" multiple className="form-input" onChange={handleInputChange} />
+                                                    {selectedPhotos && selectedPhotos.length > 0 ? (
+                                                        <p className="step-note" style={{ color: '#38a169', fontWeight: 600 }}>
+                                                            ✓ {selectedPhotos.length} photo{selectedPhotos.length > 1 ? 's' : ''} ready to upload — click &quot;Save Changes&quot; to save them.
+                                                        </p>
+                                                    ) : (
+                                                        <p className="step-note">Leave empty to keep existing photos. Upload new ones to add to this space.</p>
+                                                    )}
                                                 </div>
 
                                                 <div className="form-group">

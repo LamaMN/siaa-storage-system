@@ -40,7 +40,7 @@ export default function RootLayout({
                     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
                 />
             </head>
-            <body>{children}</body>
+            <body suppressHydrationWarning>{children}</body>
         </html>
     );
 }

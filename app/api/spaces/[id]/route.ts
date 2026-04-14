@@ -30,15 +30,15 @@ export async function PUT(
     try {
         const { id } = await params;
         const spaceId = parseInt(id, 10);
-        
+
         // Verify auth directly since this might not go through middleware
         const authHeader = request.headers.get('authorization');
         const token = extractTokenFromHeader(authHeader);
         if (!token) return errorResponse('Unauthorized', 401);
-        
+
         const payload = await verifyToken(token);
         if (payload.userType !== 'provider') return errorResponse('Forbidden', 403);
-        
+
         const providerId = payload.id;
 
         const body = await request.json();
@@ -58,14 +58,14 @@ export async function DELETE(
     try {
         const { id } = await params;
         const spaceId = parseInt(id, 10);
-        
+
         const authHeader = request.headers.get('authorization');
         const token = extractTokenFromHeader(authHeader);
         if (!token) return errorResponse('Unauthorized', 401);
-        
+
         const payload = await verifyToken(token);
         if (payload.userType !== 'provider') return errorResponse('Forbidden', 403);
-        
+
         const providerId = payload.id;
 
         await deleteSpace(spaceId, providerId);

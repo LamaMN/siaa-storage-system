@@ -1,6 +1,23 @@
 import { NextRequest } from 'next/server';
-import { uploadSpaceImages } from '@/services/space.service';
+import { uploadSpaceImages, getSpaceImages } from '@/services/space.service';
 import { errorResponse, successResponse } from '@/lib/api-helpers';
+import { verifyToken, extractTokenFromHeader } from '@/lib/auth';
+
+export async function GET(
+    _request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
+        const spaceId = parseInt(id, 10);
+        if (isNaN(spaceId)) return errorResponse('Invalid space ID', 400);
+        const images = await getSpaceImages(spaceId);
+        return successResponse({ images });
+    } catch (err) {
+        console.error('Get space images error:', err);
+        return errorResponse('Failed to load images', 500);
+    }
+}
 
 export async function POST(
     request: NextRequest,
@@ -9,8 +26,12 @@ export async function POST(
     try {
         const { id } = await params;
         const spaceId = parseInt(id, 10);
-        const userType = request.headers.get('x-user-type');
-        if (userType !== 'provider') return errorResponse('Forbidden', 403);
+
+        const authHeader = request.headers.get('authorization');
+        const token = extractTokenFromHeader(authHeader);
+        if (!token) return errorResponse('Unauthorized', 401);
+        const payload = await verifyToken(token);
+        if (payload.userType !== 'provider') return errorResponse('Forbidden', 403);
 
         const formData = await request.formData();
         const files: Array<{ buffer: Buffer; contentType: string; caption?: string }> = [];

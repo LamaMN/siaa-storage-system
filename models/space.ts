@@ -146,6 +146,7 @@ export interface CreateSpaceInput {
     latitude?: number;
     longitude?: number;
     landmark?: string;
+    status?: string | SpaceStatus;
 }
 
 export interface UpdateSpaceInput extends Partial<CreateSpaceInput> {
