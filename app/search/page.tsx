@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Loader from '@/components/Loader';
 
@@ -8,11 +8,20 @@ const SearchMap = dynamic(() => import('./SearchMap'), {
     loading: () => <div style={{ height: '280px', width: '100%', background: '#f7fafc', borderRadius: '14px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a0aec0' }}><p>Loading Map...</p></div>
 });
 
+const Space3DVisualizer = dynamic(() => import('../components/Space3DVisualizer'), {
+    ssr: false,
+    loading: () => <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><p>Loading 3D Visualizer...</p></div>
+});
+
+
 interface SpaceResult {
     SpaceID: number;
     Title: string;
     SpaceType?: string;
     Size?: number;
+    Width?: number;
+    Length?: number;
+    Height?: number;
     PricePerMonth?: number;
     PricePerWeek?: number;
     PricePerDay?: number;
@@ -38,8 +47,17 @@ export default function SearchPage() {
     const [selectedCity, setSelectedCity] = useState('');
     const [spaces, setSpaces] = useState<SpaceResult[]>([]);
     const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
     const [modalSpace, setModalSpace] = useState<SpaceResult | null>(null);
+    const [show3DVisualizer, setShow3DVisualizer] = useState(false);
+    const [modalImages, setModalImages] = useState<number[]>([]);
+    const [modalImageIndex, setModalImageIndex] = useState(0);
+    const [showLoadMore, setShowLoadMore] = useState(false);
+    const lastCardRef = useRef<HTMLElement | null>(null);
+    const LIMIT = 12;
 
     const [filters, setFilters] = useState({
         city: '',
@@ -137,11 +155,7 @@ export default function SearchPage() {
         }));
     }
 
-    async function performSearch(e?: FormEvent, overrideCity?: string, overrideMaxPrice?: number) {
-        if (e) e.preventDefault();
-        setLoading(true);
-        setHasSearched(true);
-
+    function buildSearchParams(overrideCity?: string, overrideMaxPrice?: number, page = 1) {
         const params = new URLSearchParams();
         const searchCity = overrideCity !== undefined ? overrideCity : filters.city;
         const searchMaxPrice = overrideMaxPrice !== undefined ? overrideMaxPrice : filters.maxPrice;
@@ -157,11 +171,26 @@ export default function SearchPage() {
         if (filters.loadingAssistance) params.set('loadingAssistance', '1');
         if (filters.startDate) params.set('startDate', filters.startDate);
         params.set('sortBy', filters.sortBy);
+        params.set('page', String(page));
+        params.set('limit', String(LIMIT));
+        return params;
+    }
+
+    async function performSearch(e?: FormEvent, overrideCity?: string, overrideMaxPrice?: number) {
+        if (e) e.preventDefault();
+        setLoading(true);
+        setHasSearched(true);
+        setCurrentPage(1);
+        setHasMore(false);
+
+        const params = buildSearchParams(overrideCity, overrideMaxPrice, 1);
 
         try {
             const res = await fetch(`/api/spaces?${params.toString()}`);
             const data = await res.json();
-            setSpaces(data.spaces || []);
+            const results: SpaceResult[] = data.spaces || [];
+            setSpaces(results);
+            setHasMore(results.length === LIMIT);
         } catch (err) {
             console.error('Search error:', err);
         } finally {
@@ -169,9 +198,40 @@ export default function SearchPage() {
         }
     }
 
+    async function loadMore() {
+        setLoadingMore(true);
+        const nextPage = currentPage + 1;
+        const params = buildSearchParams(undefined, undefined, nextPage);
+
+        try {
+            const res = await fetch(`/api/spaces?${params.toString()}`);
+            const data = await res.json();
+            const results: SpaceResult[] = data.spaces || [];
+            setSpaces(prev => [...prev, ...results]);
+            setCurrentPage(nextPage);
+            setHasMore(results.length === LIMIT);
+        } catch (err) {
+            console.error('Load more error:', err);
+        } finally {
+            setLoadingMore(false);
+        }
+    }
+
     function handleSearch(e: FormEvent) {
         performSearch(e);
     }
+
+    // Show Load More button only when last card is in view
+    const lastCardCallbackRef = useCallback((node: HTMLElement | null) => {
+        lastCardRef.current = node;
+        if (!node) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => setShowLoadMore(entry.isIntersecting),
+            { threshold: 0.3 }
+        );
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [spaces.length]);
 
     function renderStars(rating: number) {
         return Array.from({ length: 5 }).map((_, i) => (
@@ -469,10 +529,11 @@ export default function SearchPage() {
                                         <p>Use the filters on the left to search for storage spaces.</p>
                                     </article>
                                 )}
-                                {!loading && spaces.map(space => (
+                                {!loading && spaces.map((space, index) => (
                                     <article
                                         className="storage-card is-visible"
                                         key={space.SpaceID}
+                                        ref={index === spaces.length - 1 ? lastCardCallbackRef : undefined}
                                         onClick={() => setModalSpace(space)}
                                         style={{ padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
                                         onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
@@ -533,7 +594,16 @@ export default function SearchPage() {
                                                 <button
                                                     className="btn btn-outline"
                                                     style={{ padding: '6px 14px', fontSize: '13px', fontWeight: 600, borderRadius: '6px', background: '#f8fafc', color: '#4a5568', border: '1px solid #e2e8f0', cursor: 'pointer' }}
-                                                    onClick={(e) => { e.stopPropagation(); setModalSpace(space); }}
+                                                    onClick={(e) => { e.stopPropagation();
+                                        setModalImageIndex(0);
+                                        setModalImages(space.FirstImageID ? [space.FirstImageID] : []);
+                                        setModalSpace(space);
+                                        // Fetch all images for this space
+                                        fetch(`/api/spaces/${space.SpaceID}/images`)
+                                            .then(r => r.json())
+                                            .then(d => { if (d.images) setModalImages(d.images.map((img: { ImageID: number }) => img.ImageID)); })
+                                            .catch(() => {});
+                                    }}
                                                 >
                                                     View Details
                                                 </button>
@@ -549,6 +619,34 @@ export default function SearchPage() {
                                         </div>
                                     </article>
                                 ))}
+                                {hasMore && (
+                                    <div style={{ textAlign: 'center', padding: '16px 0 8px', opacity: showLoadMore ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: showLoadMore ? 'auto' : 'none' }}>
+                                        <button
+                                            onClick={loadMore}
+                                            disabled={loadingMore}
+                                            style={{
+                                                padding: '12px 40px',
+                                                borderRadius: '12px',
+                                                background: '#718096',
+                                                color: '#fff',
+                                                fontWeight: 700,
+                                                fontSize: '15px',
+                                                border: 'none',
+                                                cursor: loadingMore ? 'not-allowed' : 'pointer',
+                                                opacity: loadingMore ? 0.6 : 1,
+                                                boxShadow: '0 4px 10px rgba(0,0,0,0.12)',
+                                                transition: 'all 0.2s ease',
+                                                minWidth: '200px',
+                                            }}
+                                        >
+                                            {loadingMore ? (
+                                                <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>Loading...</>
+                                            ) : (
+                                                <><i className="fa-solid fa-chevron-down" style={{ marginRight: '8px' }}></i>Load More Spaces</>
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </aside>
                     </div>
@@ -562,10 +660,23 @@ export default function SearchPage() {
 
                         {/* Top Section: Image (Left) + Details (Right) */}
                         <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0' }}>
-                            {/* Left Side: Image */}
-                            <div style={{ flex: '1 1 300px', minHeight: '260px', background: '#edf2f7', position: 'relative' }}>
-                                {modalSpace.FirstImageID ? (
-                                    <img src={`/api/images/space/${modalSpace.FirstImageID}`} alt={modalSpace.Title} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                            {/* Left Side: Image Gallery */}
+                            <div style={{ flex: '1 1 300px', minHeight: '260px', background: '#edf2f7', position: 'relative', overflow: 'hidden' }}>
+                                {modalImages.length > 0 ? (
+                                    <>
+                                        <img src={`/api/images/space/${modalImages[modalImageIndex]}`} alt={modalSpace.Title} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                                        {modalImages.length > 1 && (
+                                            <>
+                                                <button onClick={() => setModalImageIndex(i => (i - 1 + modalImages.length) % modalImages.length)} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', color: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>‹</button>
+                                                <button onClick={() => setModalImageIndex(i => (i + 1) % modalImages.length)} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', color: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>›</button>
+                                                <div style={{ position: 'absolute', bottom: '8px', left: 0, width: '100%', display: 'flex', justifyContent: 'center', gap: '5px', zIndex: 2 }}>
+                                                    {modalImages.map((_, i) => (
+                                                        <span key={i} onClick={() => setModalImageIndex(i)} style={{ width: '7px', height: '7px', borderRadius: '50%', background: i === modalImageIndex ? '#fff' : 'rgba(255,255,255,0.45)', cursor: 'pointer', display: 'inline-block' }} />
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
                                 ) : (
                                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a0aec0' }}>
                                         <i className="fa-solid fa-image" style={{ fontSize: '48px' }}></i>
@@ -655,6 +766,9 @@ export default function SearchPage() {
 
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <button style={{ padding: '12px 24px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 700, fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setModalSpace(null)}>Cancel</button>
+                                <button style={{ padding: '12px 24px', borderRadius: '10px', background: '#4a5568', color: '#fff', fontWeight: 700, fontSize: '15px', border: 'none', cursor: 'pointer' }} onClick={() => setShow3DVisualizer(true)}>
+                                    <i className="fa-solid fa-cube" style={{ marginRight: '8px' }}></i> See How Packages Fit
+                                </button>
                                 <a href={`/booking?spaceId=${modalSpace.SpaceID}`} style={{ padding: '12px 32px', borderRadius: '10px', background: 'linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)', color: '#fff', fontWeight: 700, fontSize: '16px', textDecoration: 'none', display: 'inline-block', boxShadow: '0 4px 12px rgba(255,107,53,0.3)', transition: 'all 0.2s ease', border: 'none', cursor: 'pointer' }}>
                                     Book Space Now
                                 </a>
@@ -663,6 +777,16 @@ export default function SearchPage() {
 
                     </div>
                 </div>
+            )}
+
+            {show3DVisualizer && modalSpace && (
+                <Space3DVisualizer 
+                    spaceWidth={modalSpace.Width || Math.sqrt(modalSpace.Size || 9)} 
+                    spaceLength={modalSpace.Length || Math.sqrt(modalSpace.Size || 9)} 
+                    spaceHeight={modalSpace.Height || 2.5} 
+                    imageUrl={modalSpace.FirstImageID ? `/api/images/space/${modalSpace.FirstImageID}` : undefined}
+                    onClose={() => setShow3DVisualizer(false)} 
+                />
             )}
 
             <footer className="footer">

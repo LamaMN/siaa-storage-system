@@ -1,6 +1,11 @@
 /* auth-alerts.css - Alert styling for login and register pages */
 
 /* Alert Container */
+
+
+
+/* tt testimh */
+
 .alert {
     display: flex;
     align-items: center;
@@ -12,6 +17,7 @@
     font-weight: 500;
     animation: slideDown 0.3s ease-out;
 }
+
 
 .alert i {
     font-size: 1.2rem;

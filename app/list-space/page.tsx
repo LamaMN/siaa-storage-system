@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useState, FormEvent } from 'react';
 import dynamic from 'next/dynamic';
 import Loader from '@/components/Loader';
@@ -159,6 +159,7 @@ export default function ListSpacePage() {
             pricePerMonth: parseFloat(formData.pricePerMonth),
             pricePerWeek: formData.pricePerWeek ? parseFloat(formData.pricePerWeek) : undefined,
             pricePerDay: formData.pricePerDay ? parseFloat(formData.pricePerDay) : undefined,
+            status: formData.listingStatus === 'active' ? 'Active' : 'Inactive',
         };
 
         try {
@@ -178,7 +179,22 @@ export default function ListSpacePage() {
                 return;
             }
 
-            setSuccess('Your space has been listed 🎉 We’ve saved your listing. You can edit details or upload more photos later from your dashboard.');
+            const spaceId = response.data?.spaceId;
+
+            // Upload photos if provider selected any
+            if (spaceId && formData.listingPhotos && formData.listingPhotos.length > 0) {
+                const photoForm = new FormData();
+                for (let i = 0; i < formData.listingPhotos.length; i++) {
+                    photoForm.append(`image${i}`, formData.listingPhotos[i]);
+                }
+                await fetch(`/api/spaces/${spaceId}/images`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: photoForm,
+                });
+            }
+
+            setSuccess('Your space has been listed successfully! Your photos have been saved.');
             (document.getElementById('listingForm') as HTMLFormElement)?.reset();
         } catch {
             setError('Network error. Please try again.');
@@ -562,3 +578,4 @@ export default function ListSpacePage() {
         </>
     );
 }
+

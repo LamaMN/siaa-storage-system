@@ -67,6 +67,7 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<SpaceWi
   const rows = await query<SpaceWithDetails & { MatchScore: number }>(
     `SELECT
       s.SpaceID, s.ProviderID, s.Title, s.Description, s.SpaceType, s.Size,
+      s.Width, s.Length, s.Height,
       s.PricePerMonth, s.PricePerWeek, s.PricePerDay, s.IsAvailable, s.Status,
       s.FavoriteCount, s.MinRentalPeriod, s.CreatedAt, s.UpdatedAt,
       l.AddressLine1, l.City, l.Region, l.Latitude, l.Longitude, l.Landmark,
@@ -213,6 +214,7 @@ export async function createSpace(providerId: number, input: CreateSpaceInput): 
       title: input.title,
       description: input.description || null,
       spaceType: input.spaceType || null,
+      status: input.status || 'Pending',
       size: input.size,
       height: input.height || null,
       width: input.width || null,

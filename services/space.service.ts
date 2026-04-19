@@ -43,6 +43,7 @@ export const createSpaceSchema = z.object({
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
     landmark: z.string().max(255).optional(),
+    status: z.string().optional(),
 });
 
 // ============================================================
