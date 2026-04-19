@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
+import Loader from '@/components/Loader';
 import {
     PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
@@ -129,23 +130,30 @@ export default function DashboardPage() {
             window.location.href = '/login';
             return;
         }
-        const user: User = JSON.parse(storedUser);
-        setCurrentUser(user);
-        setToken(storedToken);
-        setIsFirstLogin(firstLogin);
+        try {
+            const user: User = JSON.parse(storedUser);
+            setCurrentUser(user);
+            setToken(storedToken);
+            setIsFirstLogin(firstLogin);
 
-        setProfile({
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            email: user.email || '',
-            phone: '',
-            companyName: '',
-            businessName: '',
-            role: user.userType === 'seeker' ? 'Storage Seeker' : 'Storage Provider',
-            status: user.accountStatus || 'Active',
-        });
+            setProfile({
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                phone: '',
+                companyName: '',
+                businessName: '',
+                role: user.userType === 'seeker' ? 'Storage Seeker' : 'Storage Provider',
+                status: user.accountStatus || 'Active',
+            });
 
-        loadData(user, storedToken);
+            loadData(user, storedToken);
+        } catch (error) {
+            console.error("Failed to parse user data", error);
+            localStorage.removeItem('siaaUser');
+            localStorage.removeItem('siaaToken');
+            window.location.href = '/login';
+        }
     }, []);
 
     const authHeaders = useCallback((t: string) => ({
@@ -331,7 +339,7 @@ export default function DashboardPage() {
         window.location.href = '/login';
     }
 
-    if (!currentUser) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+    if (!currentUser) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>;
 
     const isProvider = currentUser.userType === 'provider';
     const welcomeMessage = isFirstLogin
@@ -514,7 +522,7 @@ export default function DashboardPage() {
                             <section id="historySection" className={`dashboard-section ${activeSection === 'historySection' ? 'is-active' : ''}`}>
                                 <h2 className="section-title">My Bookings</h2>
 
-                                {historyLoading && <p>Loading...</p>}
+                                {historyLoading && <Loader />}
 
                                 {/* SEEKER VIEW */}
                                 {!isProvider && !historyLoading && (
@@ -577,7 +585,7 @@ export default function DashboardPage() {
                         {isProvider && (
                             <section id="spacesSection" className={`dashboard-section ${activeSection === 'spacesSection' ? 'is-active' : ''}`}>
                                 <h2 className="section-title">Your Listed Spaces</h2>
-                                {historyLoading && <p>Loading...</p>}
+                                {historyLoading && <Loader />}
                                 {!historyLoading && (
                                     <div>
                                         <ul className="history-list">
@@ -619,7 +627,7 @@ export default function DashboardPage() {
                         {isProvider && (
                             <section id="bookingsSection" className={`dashboard-section ${activeSection === 'bookingsSection' ? 'is-active' : ''}`}>
                                 <h2 className="section-title">Incoming Booking Requests</h2>
-                                {historyLoading && <p>Loading...</p>}
+                                {historyLoading && <Loader />}
                                 {!historyLoading && (
                                     <div>
                                         <ul className="history-list">

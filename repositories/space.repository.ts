@@ -206,7 +206,7 @@ export async function createSpace(providerId: number, input: CreateSpaceInput): 
     VALUES (
       @providerId, @title, @description, @spaceType, @size, @height, @width, @length,
       @pricePerMonth, @pricePerWeek, @pricePerDay, @minRentalPeriod, @maxRentalPeriod,
-      @floorNumber, 1, 'Pending'
+      @floorNumber, 1, 'Active'
     )`,
     {
       providerId,

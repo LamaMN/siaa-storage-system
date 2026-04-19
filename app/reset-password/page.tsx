@@ -1,6 +1,7 @@
 'use client';
 import { useState, FormEvent, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Loader from '@/components/Loader';
 
 function ResetForm() {
     const searchParams = useSearchParams();
@@ -164,7 +165,7 @@ export default function ResetPasswordPage() {
                     <div className="auth-card">
                         <h2 className="auth-title">Create new password</h2>
                         <p className="auth-subtitle">Enter and confirm your new password below.</p>
-                        <Suspense fallback={<p>Loading...</p>}>
+                        <Suspense fallback={<Loader />}>
                             <ResetForm />
                         </Suspense>
                     </div>

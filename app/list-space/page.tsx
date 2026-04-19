@@ -1,10 +1,11 @@
 'use client';
 import { useEffect, useState, FormEvent } from 'react';
 import dynamic from 'next/dynamic';
+import Loader from '@/components/Loader';
 
 const LocationMap = dynamic(() => import('./LocationMap'), {
     ssr: false,
-    loading: () => <div style={{ height: '300px', background: '#f7fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px' }}>Loading map...</div>
+    loading: () => <div style={{ height: '300px', background: '#f7fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px' }}><Loader /></div>
 });
 
 interface User {
@@ -186,7 +187,7 @@ export default function ListSpacePage() {
         }
     }
 
-    if (!user) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+    if (!user) return <Loader />;
 
     return (
         <>

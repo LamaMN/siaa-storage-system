@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
 import dynamic from 'next/dynamic';
+import Loader from '@/components/Loader';
 
 const SearchMap = dynamic(() => import('./SearchMap'), {
     ssr: false,
@@ -455,7 +456,7 @@ export default function SearchPage() {
                             <div className="storage-results__list">
                                 {loading && (
                                     <div style={{ padding: '2rem', textAlign: 'center' }}>
-                                        <p>Searching spaces...</p>
+                                        <Loader />
                                     </div>
                                 )}
                                 {!loading && hasSearched && spaces.length === 0 && (
