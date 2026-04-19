@@ -135,6 +135,8 @@ export interface CreateSpaceInput {
     parkingAvailable?: boolean;
     loadingAssistance?: boolean;
     restrictions?: string;
+    temperature?: number;
+    humidity?: number;
     // Location
     addressLine1: string;
     addressLine2?: string;
@@ -172,7 +174,7 @@ export interface SpaceSearchFilters {
     loadingAssistance?: boolean;
     rentalDuration?: 'daily' | 'weekly' | 'monthly';
     startDate?: string;
-    sortBy?: 'match' | 'priceLow' | 'priceHigh' | 'rating' | 'newest';
+    sortBy?: 'match' | 'priceLow' | 'priceHigh' | 'distance' | 'rating' | 'newest';
     page?: number;
     limit?: number;
 }

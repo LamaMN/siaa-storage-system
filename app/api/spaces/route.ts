@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
             limit,
         };
 
-        const spaces = await searchAndRecommendSpaces(filters);
-        return successResponse({ spaces, page, limit, count: spaces.length });
+        const result = await searchAndRecommendSpaces(filters);
+        return successResponse({ spaces: result.spaces, page, limit, count: result.spaces.length, totalCount: result.totalCount });
     } catch (err) {
         console.error('Search spaces error:', err);
         return errorResponse('Failed to search spaces', 500);

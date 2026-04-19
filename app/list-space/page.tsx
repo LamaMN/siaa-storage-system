@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useEffect, useState, FormEvent } from 'react';
 import dynamic from 'next/dynamic';
 import Loader from '@/components/Loader';
@@ -36,6 +36,8 @@ export default function ListSpacePage() {
         listingWidth: '',
         listingHeight: '',
         listingDescription: '',
+        buildingNumber: '',
+        floorNumber: '',
 
         // Step 2
         featTemperature: false,
@@ -45,6 +47,8 @@ export default function ListSpacePage() {
         featSecureAccess: false,
         featCCTV: false,
         featLighting: false,
+        temperatureValue: '',
+        humidityValue: '',
         prohibitedItems: '',
         listingPhotos: null as FileList | null,
         listingVideo: null as FileList | null,
@@ -56,6 +60,7 @@ export default function ListSpacePage() {
         pricePerDay: '',
         pricePerWeek: '',
         pricePerMonth: '',
+        maxRentalPeriod: '',
         accessNotes: '',
 
         // Step 4
@@ -143,6 +148,8 @@ export default function ListSpacePage() {
             width: width,
             height: parseFloat(formData.listingHeight),
             description: formData.listingDescription,
+            buildingNumber: formData.buildingNumber || undefined,
+            floorNumber: formData.floorNumber ? parseInt(formData.floorNumber) : undefined,
 
             climateControlled: formData.featClimate || formData.featTemperature,
             cctvMonitored: formData.featCCTV,
@@ -150,6 +157,8 @@ export default function ListSpacePage() {
             parkingAvailable: false,
             loadingAssistance: false,
             restrictions: formData.prohibitedItems,
+            temperature: (formData.featTemperature || formData.featClimate || formData.featHumidity) && formData.temperatureValue ? parseFloat(formData.temperatureValue) : undefined,
+            humidity: (formData.featTemperature || formData.featClimate || formData.featHumidity) && formData.humidityValue ? parseFloat(formData.humidityValue) : undefined,
 
             accessType: formData.accessType,
             availableFrom: formData.availableFrom,
@@ -159,6 +168,7 @@ export default function ListSpacePage() {
             pricePerMonth: parseFloat(formData.pricePerMonth),
             pricePerWeek: formData.pricePerWeek ? parseFloat(formData.pricePerWeek) : undefined,
             pricePerDay: formData.pricePerDay ? parseFloat(formData.pricePerDay) : undefined,
+            maxRentalPeriod: formData.maxRentalPeriod ? parseInt(formData.maxRentalPeriod) : undefined,
             status: formData.listingStatus === 'active' ? 'Active' : 'Inactive',
         };
 
@@ -222,6 +232,42 @@ export default function ListSpacePage() {
                     </div>
                 </div>
             </header>
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                .premium-file-input {
+                    font-family: 'Baloo Bhaijaan 2', sans-serif !important;
+                }
+                .premium-file-input::file-selector-button {
+                    padding: 8px 16px;
+                    margin-right: 15px;
+                    border-radius: 999px;
+                    border: none;
+                    background-color: #e2e8f0;
+                    color: #4a5568;
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-family: 'Baloo Bhaijaan 2', sans-serif !important;
+                }
+                .premium-file-input::file-selector-button:hover {
+                    background-color: #cbd5e0;
+                }
+                .step-panel.is-active {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 5px; /* Increased spacing between rows */
+                }
+                .step-row {
+                    gap: 24px !important; /* Increased spacing between items in a row */
+                }
+                .form-group {
+                    gap: 10px !important; /* Increased spacing between label and input */
+                }
+                .step-actions {
+                    margin-top: 12px;
+                }
+            ` }} />
 
             <section className="listing-section">
                 <div className="container">
@@ -285,29 +331,40 @@ export default function ListSpacePage() {
 
                                                     <div className="form-group">
                                                         <label className="form-label">Neighborhood (Jeddah) *</label>
-                                                        <select name="listingNeighborhood" className="form-input" value={formData.listingNeighborhood} onChange={handleInputChange} required>
-                                                            <option value="">Select neighborhood</option>
-                                                            <option value="al-salama">Al-Salama</option>
-                                                            <option value="al-rawdah">Al-Rawdah</option>
-                                                            <option value="al-nahda">Al-Nahda</option>
-                                                            <option value="al-andalus">Al-Andalus</option>
-                                                            <option value="al-hamra">Al-Hamra</option>
-                                                            <option value="al-rehab">Al-Rehab</option>
-                                                            <option value="al-faisaliyah">Al-Faisaliyah</option>
-                                                            <option value="al-naeem">Al-Naeem</option>
-                                                            <option value="al-basateen">Al-Basateen</option>
-                                                            <option value="al-shati">Al-Shati (Corniche)</option>
-                                                            <option value="al-safa">Al-Safa</option>
-                                                            <option value="al-aziziyah">Al-Aziziyah</option>
-                                                            <option value="al-baghdadiyah">Al-Baghdadiyah</option>
-                                                            <option value="al-balad">Al-Balad</option>
-                                                        </select>
+                                                        <input list="neighborhoods" name="listingNeighborhood" className="form-input" placeholder="e.g., Al-Salama" value={formData.listingNeighborhood} onChange={handleInputChange} required />
+                                                        <datalist id="neighborhoods">
+                                                            <option value="Al-Salama" />
+                                                            <option value="Al-Rawdah" />
+                                                            <option value="Al-Nahda" />
+                                                            <option value="Al-Andalus" />
+                                                            <option value="Al-Hamra" />
+                                                            <option value="Al-Rehab" />
+                                                            <option value="Al-Faisaliyah" />
+                                                            <option value="Al-Naeem" />
+                                                            <option value="Al-Basateen" />
+                                                            <option value="Al-Shati" />
+                                                            <option value="Al-Safa" />
+                                                            <option value="Al-Aziziyah" />
+                                                            <option value="Al-Baghdadiyah" />
+                                                            <option value="Al-Balad" />
+                                                        </datalist>
                                                     </div>
                                                 </div>
 
                                                 <div className="form-group">
                                                     <label className="form-label">Full address *</label>
                                                     <input name="listingAddress" type="text" className="form-input" placeholder="Building, street, nearby landmark…" value={formData.listingAddress} onChange={handleInputChange} required />
+                                                </div>
+
+                                                <div className="step-row">
+                                                    <div className="form-group">
+                                                        <label className="form-label">Building Number</label>
+                                                        <input name="buildingNumber" type="text" className="form-input" placeholder="Optional" value={formData.buildingNumber} onChange={handleInputChange} />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Floor Number</label>
+                                                        <input name="floorNumber" type="number" className="form-input" placeholder="Optional" value={formData.floorNumber} onChange={handleInputChange} />
+                                                    </div>
                                                 </div>
 
                                                 <LocationMap
@@ -330,14 +387,14 @@ export default function ListSpacePage() {
                                                 <div className="step-row">
                                                     <div className="form-group">
                                                         <label className="form-label">Space type *</label>
-                                                        <select name="listingType" className="form-input" value={formData.listingType} onChange={handleInputChange} required>
-                                                            <option value="">Choose type</option>
-                                                            <option value="room">Indoor room</option>
-                                                            <option value="garage">Garage / parking</option>
-                                                            <option value="warehouse">Warehouse corner</option>
-                                                            <option value="outdoor">Outdoor covered area</option>
-                                                            <option value="Basement">Basement</option>
-                                                        </select>
+                                                        <input list="spaceTypes" name="listingType" className="form-input" placeholder="e.g., room" value={formData.listingType} onChange={handleInputChange} required />
+                                                        <datalist id="spaceTypes">
+                                                            <option value="room" />
+                                                            <option value="garage" />
+                                                            <option value="warehouse" />
+                                                            <option value="outdoor" />
+                                                            <option value="Basement" />
+                                                        </datalist>
                                                     </div>
 
                                                     <div className="form-group">
@@ -422,21 +479,78 @@ export default function ListSpacePage() {
                                                     </div>
                                                 </div>
 
+                                                {(formData.featTemperature || formData.featClimate || formData.featHumidity) && (
+                                                    <>
+                                                        <div className="step-row">
+                                                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                                                <label className="form-label">Temperature (°C) (Optional)</label>
+                                                                <input name="temperatureValue" type="number" step="0.1" className="form-input" placeholder="e.g. 22" value={formData.temperatureValue} onChange={handleInputChange} />
+                                                            </div>
+                                                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                                                <label className="form-label">Humidity (%) (Optional)</label>
+                                                                <input name="humidityValue" type="number" step="1" className="form-input" placeholder="e.g. 45" value={formData.humidityValue} onChange={handleInputChange} />
+                                                            </div>
+                                                        </div>
+                                                        <p className="step-note" style={{ marginTop: '0.25rem', marginBottom: '1.5rem' }}>Note: this is the current condition at home.</p>
+                                                    </>
+                                                )}
+
                                                 <div className="form-group">
                                                     <label className="form-label">Prohibited items (optional)</label>
                                                     <textarea name="prohibitedItems" className="form-input" rows={2} placeholder="e.g., No flammable materials, no chemicals…" value={formData.prohibitedItems} onChange={handleInputChange}></textarea>
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <label className="form-label">Upload photos *</label>
-                                                    <input name="listingPhotos" type="file" accept="image/*" multiple className="form-input" onChange={handleInputChange} />
-                                                    <p className="step-note">Minimum 3, maximum 15 images per listing.</p>
+                                                    <label className="form-label" style={{ fontFamily: "'Baloo Bhaijaan 2', sans-serif" }}>Upload photos *</label>
+                                                    <input
+                                                        name="listingPhotos"
+                                                        type="file"
+                                                        accept="image/*"
+                                                        multiple
+                                                        className="premium-file-input"
+                                                        style={{
+                                                            display: 'block',
+                                                            width: '100%',
+                                                            padding: '10px 14px',
+                                                            backgroundColor: 'rgba(240, 247, 255, 0.4)',
+                                                            border: '1px solid #e1e9f4',
+                                                            borderRadius: '10px',
+                                                            fontSize: '14px',
+                                                            color: '#4a5568',
+                                                            cursor: 'pointer',
+                                                            fontFamily: "'Baloo Bhaijaan 2', sans-serif"
+                                                        }}
+                                                        onChange={handleInputChange}
+                                                    />
+                                                    <p style={{ fontSize: '11px', color: '#718096', marginTop: '6px', marginLeft: '4px', fontFamily: "'Baloo Bhaijaan 2', sans-serif" }}>
+                                                        JPG, PNG, max 2MB. A clear front-facing photo works best. Min 3, max 15.
+                                                    </p>
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <label className="form-label">Optional video tour</label>
-                                                    <input name="listingVideo" type="file" accept="video/*" className="form-input" onChange={handleInputChange} />
-                                                    <p className="step-note">Short video showing how to access and use the space (optional).</p>
+                                                    <label className="form-label" style={{ fontFamily: "'Baloo Bhaijaan 2', sans-serif" }}>Optional video tour</label>
+                                                    <input
+                                                        name="listingVideo"
+                                                        type="file"
+                                                        accept="video/*"
+                                                        className="premium-file-input"
+                                                        style={{
+                                                            display: 'block',
+                                                            width: '100%',
+                                                            padding: '10px 14px',
+                                                            backgroundColor: 'rgba(240, 247, 255, 0.4)',
+                                                            border: '1px solid #e1e9f4',
+                                                            borderRadius: '10px',
+                                                            fontSize: '14px',
+                                                            color: '#4a5568',
+                                                            cursor: 'pointer',
+                                                            fontFamily: "'Baloo Bhaijaan 2', sans-serif"
+                                                        }}
+                                                        onChange={handleInputChange}
+                                                    />
+                                                    <p style={{ fontSize: '11px', color: '#718096', marginTop: '6px', marginLeft: '4px', fontFamily: "'Baloo Bhaijaan 2', sans-serif" }}>
+                                                        Optional short video showing the space entrance and conditions.
+                                                    </p>
                                                 </div>
 
                                                 <div className="step-actions step-actions--split">
@@ -496,6 +610,11 @@ export default function ListSpacePage() {
                                                         <label className="form-label">Price per Month (SAR) *</label>
                                                         <input name="pricePerMonth" type="number" min="1" className="form-input" placeholder="Required" value={formData.pricePerMonth} onChange={handleInputChange} required />
                                                     </div>
+                                                </div>
+
+                                                <div className="form-group">
+                                                    <label className="form-label">Max Rental Period (Months)</label>
+                                                    <input name="maxRentalPeriod" type="number" min="1" className="form-input" placeholder="Optional" value={formData.maxRentalPeriod} onChange={handleInputChange} />
                                                 </div>
 
                                                 <div className="form-group">

@@ -66,6 +66,7 @@ export interface ReviewWithDetails extends Review {
     SpaceType?: string;
     SeekerFirstName?: string;
     SeekerLastName?: string;
+    HasProfilePicture?: boolean;
     StartDate?: Date;
     EndDate?: Date;
 }

@@ -56,13 +56,22 @@ export async function findSpaceById(id: number): Promise<SpaceWithDetails | null
   );
 }
 
-export async function searchSpaces(filters: SpaceSearchFilters): Promise<SpaceWithDetails[]> {
+export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ spaces: SpaceWithDetails[], totalCount: number }> {
   const limit = Math.min(filters.limit || 12, 50);
   const page = Math.max(filters.page || 1, 1);
   const skip = (page - 1) * limit;
 
   const citySearch = filters.city ? `%${sanitizeLikeParam(filters.city)}%` : null;
   const typeSearch = filters.spaceType || null;
+  let orderByClause = 'ORDER BY MatchScore DESC, rv.AvgRating DESC';
+  if (filters.sortBy === 'priceLow') {
+      orderByClause = 'ORDER BY s.PricePerMonth ASC, MatchScore DESC';
+  } else if (filters.sortBy === 'priceHigh') {
+      orderByClause = 'ORDER BY s.PricePerMonth DESC, MatchScore DESC';
+  } else if (filters.sortBy === 'distance') {
+      // Simplification: if distance is chosen without coordinates, order by MatchScore
+      orderByClause = 'ORDER BY MatchScore DESC';
+  }
 
   const rows = await query<SpaceWithDetails & { MatchScore: number }>(
     `SELECT
@@ -78,6 +87,7 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<SpaceWi
       ISNULL(rv.AvgRating, 0) AS AvgRating,
       ISNULL(rv.TotalReviews, 0) AS TotalReviews,
       img.FirstImageID,
+      COUNT(*) OVER() AS TotalCount,
       (
         CASE WHEN l.City = @city THEN 30
              WHEN l.City LIKE @citySearch THEN 15
@@ -114,7 +124,7 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<SpaceWi
       AND (@maxSize IS NULL OR s.Size <= @maxSize)
       AND (@climateControlled IS NULL OR sf.ClimateControlled = @climateControlled)
       AND (@parking IS NULL OR sf.ParkingAvailable = @parking)
-    ORDER BY MatchScore DESC, rv.AvgRating DESC
+    ${orderByClause}
     OFFSET @skip ROWS FETCH NEXT @limit ROWS ONLY`,
     {
       city: filters.city || null,
@@ -137,7 +147,21 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<SpaceWi
       limit,
     }
   );
-  return rows as SpaceWithDetails[];
+  return {
+    spaces: rows as SpaceWithDetails[],
+    totalCount: rows.length > 0 ? (rows[0] as any).TotalCount : 0
+  };
+}
+
+export async function getAvailableNeighborhoods(): Promise<string[]> {
+  const rows = await query<{ City: string }>(
+    `SELECT DISTINCT l.City
+     FROM StorageSpaces s
+     JOIN Locations l ON l.SpaceID = s.SpaceID
+     WHERE s.Status = 'Active' AND s.IsAvailable = 1 AND l.City IS NOT NULL
+     ORDER BY l.City ASC`
+  );
+  return rows.map(r => r.City);
 }
 
 export async function getRecommendedSpaces(city: string, limit = 6): Promise<SpaceWithDetails[]> {
@@ -235,10 +259,10 @@ export async function createSpace(providerId: number, input: CreateSpaceInput): 
   await execute(
     `INSERT INTO SpaceFeatures (
       SpaceID, ClimateControlled, SecuritySystem, CCTVMonitored,
-      ParkingAvailable, LoadingAssistance, AccessType, Restrictions
+      ParkingAvailable, LoadingAssistance, AccessType, Restrictions, Temperature, Humidity
     ) VALUES (
       @spaceId, @climateControlled, @securitySystem, @cctvMonitored,
-      @parkingAvailable, @loadingAssistance, @accessType, @restrictions
+      @parkingAvailable, @loadingAssistance, @accessType, @restrictions, @temperature, @humidity
     )`,
     {
       spaceId,
@@ -249,6 +273,8 @@ export async function createSpace(providerId: number, input: CreateSpaceInput): 
       loadingAssistance: input.loadingAssistance || false,
       accessType: input.accessType || null,
       restrictions: input.restrictions || null,
+      temperature: input.temperature || null,
+      humidity: input.humidity || null,
     }
   );
 

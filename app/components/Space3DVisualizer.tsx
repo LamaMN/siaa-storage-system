@@ -128,15 +128,15 @@ export default function Space3DVisualizer({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
               <label style={{ fontSize: '12px', color: '#4a5568', fontWeight: 600 }}>Width (m)</label>
-              <input type="number" step="0.1" min="0.1" value={newPkgWidth} onChange={e => setNewPkgWidth(parseFloat(e.target.value) || 0.1)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e0', borderRadius: '6px', marginTop: '4px' }} />
+              <input type="number" step="0.1" min="0.1" max={spaceWidth} value={newPkgWidth} onChange={e => setNewPkgWidth(Math.min(parseFloat(e.target.value) || 0.1, spaceWidth))} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e0', borderRadius: '6px', marginTop: '4px' }} />
             </div>
             <div>
               <label style={{ fontSize: '12px', color: '#4a5568', fontWeight: 600 }}>Length (m)</label>
-              <input type="number" step="0.1" min="0.1" value={newPkgLength} onChange={e => setNewPkgLength(parseFloat(e.target.value) || 0.1)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e0', borderRadius: '6px', marginTop: '4px' }} />
+              <input type="number" step="0.1" min="0.1" max={spaceLength} value={newPkgLength} onChange={e => setNewPkgLength(Math.min(parseFloat(e.target.value) || 0.1, spaceLength))} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e0', borderRadius: '6px', marginTop: '4px' }} />
             </div>
             <div style={{ gridColumn: 'span 2' }}>
               <label style={{ fontSize: '12px', color: '#4a5568', fontWeight: 600 }}>Height (m)</label>
-              <input type="number" step="0.1" min="0.1" value={newPkgHeight} onChange={e => setNewPkgHeight(parseFloat(e.target.value) || 0.1)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e0', borderRadius: '6px', marginTop: '4px' }} />
+              <input type="number" step="0.1" min="0.1" max={spaceHeight} value={newPkgHeight} onChange={e => setNewPkgHeight(Math.min(parseFloat(e.target.value) || 0.1, spaceHeight))} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e0', borderRadius: '6px', marginTop: '4px' }} />
             </div>
           </div>
           

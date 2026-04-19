@@ -3,6 +3,7 @@ import {
     searchSpaces, getRecommendedSpaces, findSpaceById,
     createSpace as createSpaceRepo, deleteSpace,
     addSpaceImage, getSpaceImage, getSpaceImagesMeta,
+    getAvailableNeighborhoods as getAvailableNeighborhoodsRepo,
 } from '@/repositories/space.repository';
 import type { SpaceSearchFilters, CreateSpaceInput } from '@/models/space';
 
@@ -32,6 +33,8 @@ export const createSpaceSchema = z.object({
     parkingAvailable: z.boolean().optional().default(false),
     loadingAssistance: z.boolean().optional().default(false),
     restrictions: z.string().max(500).optional(),
+    temperature: z.number().optional(),
+    humidity: z.number().optional(),
     // Location
     addressLine1: z.string().min(5).max(255),
     addressLine2: z.string().max(255).optional(),
@@ -59,6 +62,10 @@ export async function getSpaceDetail(id: number) {
 export async function searchAndRecommendSpaces(filters: SpaceSearchFilters) {
     const results = await searchSpaces(filters);
     return results;
+}
+
+export async function getAvailableNeighborhoods() {
+    return getAvailableNeighborhoodsRepo();
 }
 
 export async function getRecommended(city: string, limit = 6) {

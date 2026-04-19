@@ -154,6 +154,7 @@ export async function findReviewsBySpace(spaceId: number): Promise<ReviewWithDet
     return query<ReviewWithDetails>(
         `SELECT r.*,
       sk.FirstName AS SeekerFirstName, sk.LastName AS SeekerLastName,
+      CASE WHEN sk.ProfilePicture IS NOT NULL AND DATALENGTH(sk.ProfilePicture) > 0 THEN 1 ELSE 0 END AS HasProfilePicture,
       b.StartDate, b.EndDate
     FROM Reviews r
     JOIN Bookings b ON b.BookingID = r.BookingID

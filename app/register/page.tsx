@@ -44,7 +44,11 @@ export default function RegisterPage() {
         for (const el of Array.from(form.elements)) {
             const input = el as HTMLInputElement;
             if (input.name && input.value && input.type !== 'checkbox') {
-                data[input.name] = input.value;
+                if (input.name === 'phoneNumber') {
+                    data[input.name] = `+966${input.value.replace(/^0+/, '')}`;
+                } else {
+                    data[input.name] = input.value;
+                }
             }
         }
 
@@ -174,7 +178,24 @@ export default function RegisterPage() {
 
                             <div className="form-group">
                                 <label htmlFor="phoneNumber" className="form-label">Phone Number</label>
-                                <input type="tel" id="phoneNumber" name="phoneNumber" className="form-input" placeholder="5X XXX XXXX" required />
+                                <div style={{ display: 'flex' }}>
+                                    <span style={{ padding: '0.5rem 0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRight: 'none', borderRadius: '12px 0 0 12px', color: '#4a5568', fontWeight: 600, display: 'flex', alignItems: 'center' }}>+966</span>
+                                    <input
+                                        type="tel"
+                                        id="phoneNumber"
+                                        name="phoneNumber"
+                                        className="form-input"
+                                        placeholder="5X XXX XXXX"
+                                        required
+                                        style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
+                                        onInput={(e) => {
+                                            const target = e.target as HTMLInputElement;
+                                            if (target.value.startsWith('0')) {
+                                                target.value = target.value.replace(/^0+/, '');
+                                            }
+                                        }}
+                                    />
+                                </div>
                             </div>
 
                             <div className="form-group">
