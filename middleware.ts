@@ -6,6 +6,7 @@ import { verifyToken, extractTokenFromHeader } from '@/lib/auth';
 const PROTECTED_PATHS = [
     '/dashboard',
     '/list-space',
+    '/admin',
 ];
 
 // API paths that require authentication
@@ -14,6 +15,7 @@ const PROTECTED_API_PREFIXES = [
     '/api/bookings',
     '/api/seeker',
     '/api/provider',
+    '/api/admin',
 ];
 
 export async function middleware(request: NextRequest) {
@@ -51,6 +53,14 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL('/dashboard', request.url));
         }
 
+        // Admin-only routes
+        if (pathname.startsWith('/admin') && payload.userType !== 'admin') {
+            return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
+        if (pathname.startsWith('/api/admin') && payload.userType !== 'admin') {
+            return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
+        }
+
         // Inject user info into headers for downstream API routes
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set('x-user-id', String(payload.id));
@@ -74,9 +84,11 @@ export const config = {
     matcher: [
         '/dashboard/:path*',
         '/list-space/:path*',
+        '/admin/:path*',
         '/api/profile/:path*',
         '/api/bookings/:path*',
         '/api/seeker/:path*',
         '/api/provider/:path*',
+        '/api/admin/:path*',
     ],
 };

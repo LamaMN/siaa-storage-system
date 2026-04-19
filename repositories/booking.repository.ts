@@ -126,6 +126,50 @@ export async function cancelBooking(bookingId: number, seekerId: number): Promis
 }
 
 // ============================================================
+// CALENDAR BOOKINGS (PROVIDER)
+// ============================================================
+
+export async function findCalendarBookingsByProvider(providerId: number): Promise<{
+    BookingID: number; SpaceID: number; SpaceTitle: string;
+    StartDate: string; EndDate: string; BookingStatus: string;
+}[]> {
+    return query<{
+        BookingID: number; SpaceID: number; SpaceTitle: string;
+        StartDate: string; EndDate: string; BookingStatus: string;
+    }>(
+        `SELECT
+      b.BookingID, b.SpaceID, s.Title AS SpaceTitle,
+      b.StartDate, b.EndDate, b.BookingStatus
+    FROM Bookings b
+    JOIN StorageSpaces s ON s.SpaceID = b.SpaceID
+    WHERE s.ProviderID = @providerId
+      AND b.BookingStatus IN ('Confirmed', 'Active', 'Pending')
+    ORDER BY b.StartDate ASC`,
+        { providerId }
+    );
+}
+
+// ============================================================
+// DISMISS REJECTED BOOKING
+// ============================================================
+
+export async function deleteRejectedBooking(
+    bookingId: number,
+    userId: number,
+    userType: string
+): Promise<boolean> {
+    let sql: string;
+    if (userType === 'seeker') {
+        sql = `DELETE FROM Bookings WHERE BookingID = @bookingId AND SeekerID = @userId AND BookingStatus = 'Rejected'`;
+    } else {
+        sql = `DELETE FROM Bookings WHERE BookingID = @bookingId AND BookingStatus = 'Rejected'
+               AND SpaceID IN (SELECT SpaceID FROM StorageSpaces WHERE ProviderID = @userId)`;
+    }
+    const result = await execute(sql, { bookingId, userId });
+    return (result.rowsAffected[0] || 0) > 0;
+}
+
+// ============================================================
 // REVIEW REPOSITORY
 // ============================================================
 

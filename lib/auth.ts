@@ -10,7 +10,7 @@ const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '7d';
 export interface TokenPayload extends JWTPayload {
     id: number;
     email: string;
-    userType: 'seeker' | 'provider';
+    userType: 'seeker' | 'provider' | 'admin';
     firstName: string;
 }
 

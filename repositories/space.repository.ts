@@ -231,7 +231,7 @@ export async function createSpace(providerId: number, input: CreateSpaceInput): 
     VALUES (
       @providerId, @title, @description, @spaceType, @size, @height, @width, @length,
       @pricePerMonth, @pricePerWeek, @pricePerDay, @minRentalPeriod, @maxRentalPeriod,
-      @floorNumber, 1, 'Active'
+      @floorNumber, 1, 'Pending'
     )`,
     {
       providerId,
@@ -353,6 +353,62 @@ export async function getPriceRange(): Promise<{ minPrice: number; maxPrice: num
   return {
     minPrice: row?.minPrice || 0,
     maxPrice: row?.maxPrice || 1000,
+  };
+}
+
+// ============================================================
+// ADMIN QUERIES
+// ============================================================
+
+export async function findAllPendingSpaces(): Promise<SpaceWithDetails[]> {
+  return query<SpaceWithDetails>(
+    `SELECT
+      s.*,
+      l.City, l.AddressLine1,
+      p.FirstName AS ProviderFirstName, p.LastName AS ProviderLastName,
+      p.Email AS ProviderEmail, p.BusinessName,
+      img.FirstImageID
+    FROM StorageSpaces s
+    LEFT JOIN Locations l ON l.SpaceID = s.SpaceID
+    LEFT JOIN StorageProviders p ON p.ProviderID = s.ProviderID
+    LEFT JOIN (
+      SELECT SpaceID, MIN(ImageID) AS FirstImageID FROM SpaceImages GROUP BY SpaceID
+    ) img ON img.SpaceID = s.SpaceID
+    WHERE s.Status = 'Pending'
+    ORDER BY s.CreatedAt DESC`
+  );
+}
+
+export async function updateSpaceStatus(spaceId: number, status: string): Promise<void> {
+  await execute(
+    `UPDATE StorageSpaces SET Status = @status, IsAvailable = CASE WHEN @status = 'Active' THEN 1 ELSE 0 END, UpdatedAt = GETDATE() WHERE SpaceID = @spaceId`,
+    { spaceId, status }
+  );
+}
+
+export async function getAdminStatistics(): Promise<{
+  totalSeekers: number; totalProviders: number;
+  totalSpaces: number; pendingSpaces: number; activeSpaces: number;
+  totalBookings: number; totalRevenue: number;
+}> {
+  const row = await queryOne<{
+    totalSeekers: number; totalProviders: number;
+    totalSpaces: number; pendingSpaces: number; activeSpaces: number;
+    totalBookings: number; totalRevenue: number;
+  }>(
+    `SELECT
+      (SELECT COUNT(*) FROM StorageSeekers) AS totalSeekers,
+      (SELECT COUNT(*) FROM StorageProviders) AS totalProviders,
+      (SELECT COUNT(*) FROM StorageSpaces) AS totalSpaces,
+      (SELECT COUNT(*) FROM StorageSpaces WHERE Status = 'Pending') AS pendingSpaces,
+      (SELECT COUNT(*) FROM StorageSpaces WHERE Status = 'Active') AS activeSpaces,
+      (SELECT COUNT(*) FROM Bookings) AS totalBookings,
+      (SELECT ISNULL(SUM(CASE WHEN BookingStatus IN ('Active','Completed') THEN TotalAmount ELSE 0 END), 0) FROM Bookings) AS totalRevenue`
+  );
+  return row || {
+    totalSeekers: 0, totalProviders: 0,
+    totalSpaces: 0, pendingSpaces: 0, activeSpaces: 0,
+    totalBookings: 0, totalRevenue: 0,
   };
 }
 

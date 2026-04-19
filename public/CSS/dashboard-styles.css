@@ -940,3 +940,253 @@
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+/* ========== Dismiss Button (Rejected Bookings) ========== */
+
+.dismiss-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: #fee2e2;
+    color: #ef4444;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 2;
+}
+
+.dismiss-btn:hover {
+    background: #ef4444;
+    color: #fff;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
+}
+
+/* ========== Provider Booking Calendar ========== */
+
+.calendar-wrapper {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+.calendar-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.calendar-nav-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #f7fafc;
+    color: #4a5568;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.calendar-nav-btn:hover {
+    background: #fff5f0;
+    border-color: #ff6b35;
+    color: #ff6b35;
+}
+
+.calendar-month-label {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a365d;
+    margin: 0;
+    flex: 1;
+    text-align: center;
+}
+
+.calendar-filter {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4a5568;
+    background: #f7fafc;
+    cursor: pointer;
+    min-width: 160px;
+    transition: border-color 0.2s ease;
+}
+
+.calendar-filter:focus {
+    outline: none;
+    border-color: #ff6b35;
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.calendar-day-header {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    padding: 8px 0;
+    letter-spacing: 0.5px;
+}
+
+.calendar-day {
+    min-height: 72px;
+    border-radius: 10px;
+    padding: 6px;
+    background: #f8fafc;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.calendar-day--empty {
+    background: transparent;
+    border: none;
+}
+
+.calendar-day:not(.calendar-day--empty):hover {
+    border-color: #e2e8f0;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.calendar-day--today {
+    border-color: #ff6b35 !important;
+    background: #fff9f5 !important;
+}
+
+.calendar-day--today .calendar-day-number {
+    background: #ff6b35;
+    color: #fff;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.calendar-day--booked {
+    background: #fef3ee;
+}
+
+.calendar-day-number {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.calendar-day-chips {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+}
+
+.calendar-chip {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    opacity: 0.85;
+    transition: opacity 0.15s ease;
+}
+
+.calendar-chip:hover {
+    opacity: 1;
+}
+
+.calendar-chip-more {
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.calendar-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.calendar-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.calendar-legend-label {
+    font-size: 13px;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+/* Calendar Responsive */
+@media (max-width: 768px) {
+    .calendar-controls {
+        flex-wrap: wrap;
+    }
+
+    .calendar-filter {
+        width: 100%;
+    }
+
+    .calendar-day {
+        min-height: 54px;
+        padding: 4px;
+    }
+
+    .calendar-day-number {
+        font-size: 11px;
+    }
+}
+
+/* ========== Admin Dashboard Buttons ========== */
+
+.btn-small {
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    border-radius: 8px !important;
+}
+
+.logout-link {
+    margin-top: auto;
+    color: #ef4444 !important;
+}
+
+.logout-link:hover {
+    background: #fee2e2 !important;
+    color: #ef4444 !important;
+}

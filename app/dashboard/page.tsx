@@ -34,6 +34,16 @@ interface BookingItem {
     SeekerEmail?: string;
     SeekerPhone?: string;
     Size?: number;
+    SpaceID?: number;
+}
+
+interface CalendarBooking {
+    BookingID: number;
+    SpaceID: number;
+    SpaceTitle: string;
+    StartDate: string;
+    EndDate: string;
+    BookingStatus: string;
 }
 
 interface SpaceItem {
@@ -91,6 +101,9 @@ export default function DashboardPage() {
     // Provider data
     const [providerSpaces, setProviderSpaces] = useState<SpaceItem[]>([]);
     const [providerBookings, setProviderBookings] = useState<BookingItem[]>([]);
+    const [calendarBookings, setCalendarBookings] = useState<CalendarBooking[]>([]);
+    const [calendarMonth, setCalendarMonth] = useState(new Date());
+    const [calendarFilter, setCalendarFilter] = useState<number | 'all'>('all');
 
     const [stats, setStats] = useState<Stats>({});
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -204,6 +217,12 @@ export default function DashboardPage() {
                 if (pbRes.ok) {
                     const pbData = await pbRes.json();
                     setProviderBookings(pbData.bookings || []);
+                }
+                // Load calendar data
+                const calRes = await fetch(`/api/provider/${user.id}/calendar`, { headers: authHeaders(t) });
+                if (calRes.ok) {
+                    const calData = await calRes.json();
+                    setCalendarBookings(calData.bookings || []);
                 }
             }
 
@@ -333,6 +352,20 @@ export default function DashboardPage() {
         setProfileSaving(false);
     }
 
+    async function handleDismissBooking(bookingId: number) {
+        const res = await fetch(`/api/bookings/${bookingId}/dismiss`, {
+            method: 'DELETE',
+            headers: authHeaders(token),
+        });
+        if (res.ok) {
+            setSeekerBookings(prev => prev.filter(b => b.BookingID !== bookingId));
+            setProviderBookings(prev => prev.filter(b => b.BookingID !== bookingId));
+        } else {
+            const d = await res.json();
+            alert(d.error || 'Failed to dismiss booking');
+        }
+    }
+
     function logout() {
         localStorage.removeItem('siaaUser');
         localStorage.removeItem('siaaToken');
@@ -378,6 +411,10 @@ export default function DashboardPage() {
                             <a href="#" className={`sideBar-link ${activeSection === 'bookingsSection' ? 'is-active' : ''}`}
                                 onClick={e => { e.preventDefault(); setActiveSection('bookingsSection'); }}>
                                 <i className="fa-solid fa-calendar-check"></i> Booking Requests
+                            </a>
+                            <a href="#" className={`sideBar-link ${activeSection === 'calendarSection' ? 'is-active' : ''}`}
+                                onClick={e => { e.preventDefault(); setActiveSection('calendarSection'); }}>
+                                <i className="fa-solid fa-calendar-days"></i> Calendar
                             </a>
                         </>
                     ) : (
@@ -531,7 +568,12 @@ export default function DashboardPage() {
                                             <p className="history-empty">No bookings yet. <a href="/search">Browse spaces</a> to get started.</p>
                                         )}
                                         {seekerBookings.map(booking => (
-                                            <li key={booking.BookingID} className="history-item">
+                                            <li key={booking.BookingID} className="history-item" style={{ position: 'relative' }}>
+                                                {booking.BookingStatus === 'Rejected' && (
+                                                    <button className="dismiss-btn" onClick={() => handleDismissBooking(booking.BookingID)} title="Dismiss">
+                                                        <i className="fa-solid fa-xmark"></i>
+                                                    </button>
+                                                )}
                                                 <div className="history-item-header">
                                                     <h3 className="history-item-title">{booking.SpaceTitle}</h3>
                                                     <div className="history-item-badges">
@@ -633,7 +675,12 @@ export default function DashboardPage() {
                                         <ul className="history-list">
                                             {providerBookings.length === 0 && <p>No booking requests yet.</p>}
                                             {providerBookings.map(booking => (
-                                                <li key={booking.BookingID} className="history-item">
+                                                <li key={booking.BookingID} className="history-item" style={{ position: 'relative' }}>
+                                                    {booking.BookingStatus === 'Rejected' && (
+                                                        <button className="dismiss-btn" onClick={() => handleDismissBooking(booking.BookingID)} title="Dismiss">
+                                                            <i className="fa-solid fa-xmark"></i>
+                                                        </button>
+                                                    )}
                                                     <div className="history-item-header">
                                                         <h3 className="history-item-title">{booking.SpaceTitle}</h3>
                                                         <span className={`history-item-badge ${STATUS_CLASS[booking.BookingStatus] || 'status-default'}`}>
@@ -678,6 +725,118 @@ export default function DashboardPage() {
                                         </ul>
                                     </div>
                                 )}
+                            </section>
+                        )}
+
+                        {/* Calendar Section (Provider) */}
+                        {isProvider && (
+                            <section id="calendarSection" className={`dashboard-section ${activeSection === 'calendarSection' ? 'is-active' : ''}`}>
+                                <h2 className="section-title">Booking Calendar</h2>
+
+                                {(() => {
+                                    const SPACE_COLORS = ['#ff6b35', '#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
+                                    const year = calendarMonth.getFullYear();
+                                    const month = calendarMonth.getMonth();
+                                    const firstDay = new Date(year, month, 1).getDay();
+                                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                                    const monthLabel = calendarMonth.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+
+                                    // Build unique spaces list from calendar bookings
+                                    const uniqueSpaces = Array.from(new Map(calendarBookings.map(b => [b.SpaceID, b.SpaceTitle])).entries())
+                                        .map(([id, title], i) => ({ id, title, color: SPACE_COLORS[i % SPACE_COLORS.length] }));
+
+                                    const filtered = calendarFilter === 'all' ? calendarBookings : calendarBookings.filter(b => b.SpaceID === calendarFilter);
+
+                                    function getBookingsForDay(day: number) {
+                                        const d = new Date(year, month, day);
+                                        return filtered.filter(b => {
+                                            const s = new Date(b.StartDate);
+                                            const e = new Date(b.EndDate);
+                                            s.setHours(0, 0, 0, 0);
+                                            e.setHours(23, 59, 59, 999);
+                                            return d >= s && d <= e;
+                                        });
+                                    }
+
+                                    return (
+                                        <div className="calendar-wrapper">
+                                            <div className="calendar-controls">
+                                                <button className="calendar-nav-btn" onClick={() => setCalendarMonth(new Date(year, month - 1, 1))}>
+                                                    <i className="fa-solid fa-chevron-left"></i>
+                                                </button>
+                                                <h3 className="calendar-month-label">{monthLabel}</h3>
+                                                <button className="calendar-nav-btn" onClick={() => setCalendarMonth(new Date(year, month + 1, 1))}>
+                                                    <i className="fa-solid fa-chevron-right"></i>
+                                                </button>
+
+                                                <select
+                                                    className="calendar-filter"
+                                                    value={calendarFilter === 'all' ? 'all' : String(calendarFilter)}
+                                                    onChange={e => setCalendarFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                                                >
+                                                    <option value="all">All Spaces</option>
+                                                    {uniqueSpaces.map(s => (
+                                                        <option key={s.id} value={s.id}>{s.title}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="calendar-grid">
+                                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                                                    <div key={d} className="calendar-day-header">{d}</div>
+                                                ))}
+
+                                                {Array.from({ length: firstDay }).map((_, i) => (
+                                                    <div key={`empty-${i}`} className="calendar-day calendar-day--empty"></div>
+                                                ))}
+
+                                                {Array.from({ length: daysInMonth }).map((_, i) => {
+                                                    const day = i + 1;
+                                                    const dayBookings = getBookingsForDay(day);
+                                                    const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
+
+                                                    return (
+                                                        <div key={day} className={`calendar-day ${dayBookings.length > 0 ? 'calendar-day--booked' : ''} ${isToday ? 'calendar-day--today' : ''}`}>
+                                                            <span className="calendar-day-number">{day}</span>
+                                                            <div className="calendar-day-chips">
+                                                                {dayBookings.slice(0, 2).map(b => {
+                                                                    const spaceInfo = uniqueSpaces.find(s => s.id === b.SpaceID);
+                                                                    return (
+                                                                        <div
+                                                                            key={b.BookingID}
+                                                                            className="calendar-chip"
+                                                                            style={{ backgroundColor: spaceInfo?.color || '#ff6b35' }}
+                                                                            title={`${b.SpaceTitle} (${b.BookingStatus})`}
+                                                                        ></div>
+                                                                    );
+                                                                })}
+                                                                {dayBookings.length > 2 && (
+                                                                    <span className="calendar-chip-more">+{dayBookings.length - 2}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Legend */}
+                                            {uniqueSpaces.length > 0 && (
+                                                <div className="calendar-legend">
+                                                    {uniqueSpaces.map(s => (
+                                                        <div key={s.id} className="calendar-legend-item">
+                                                            <span className="calendar-legend-dot" style={{ backgroundColor: s.color }}></span>
+                                                            <span className="calendar-legend-label">{s.title}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {calendarBookings.length === 0 && (
+                                                <p className="history-empty" style={{ marginTop: '1.5rem' }}>No confirmed bookings yet. Your calendar will populate as bookings come in.</p>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                             </section>
                         )}
 

@@ -169,7 +169,7 @@ export default function ListSpacePage() {
             pricePerWeek: formData.pricePerWeek ? parseFloat(formData.pricePerWeek) : undefined,
             pricePerDay: formData.pricePerDay ? parseFloat(formData.pricePerDay) : undefined,
             maxRentalPeriod: formData.maxRentalPeriod ? parseInt(formData.maxRentalPeriod) : undefined,
-            status: formData.listingStatus === 'active' ? 'Active' : 'Inactive',
+            status: 'Pending',
         };
 
         try {
@@ -204,7 +204,7 @@ export default function ListSpacePage() {
                 });
             }
 
-            setSuccess('Your space has been listed successfully! Your photos have been saved.');
+            setSuccess('Your space has been submitted for review! It will be visible to renters once approved by the admin.');
             (document.getElementById('listingForm') as HTMLFormElement)?.reset();
         } catch {
             setError('Network error. Please try again.');
@@ -273,8 +273,8 @@ export default function ListSpacePage() {
                 <div className="container">
                     {success ? (
                         <div className="listing-confirmation" style={{ display: 'block' }}>
-                            <h3>Your space has been listed 🎉</h3>
-                            <p>We’ve saved your listing. You can edit details or upload more photos later from your dashboard.</p>
+                            <h3>Your space has been submitted for review 📋</h3>
+                            <p>Wen admin will review your listing shortly. Once approved, it will be visible to renters searching in your neighborhood.</p>
                             <a href="/dashboard" className="btn btn-dark" style={{ marginTop: '1rem', display: 'inline-block' }}>Go to Dashboard</a>
                         </div>
                     ) : (
@@ -641,7 +641,7 @@ export default function ListSpacePage() {
                                                     <p><strong>Type:</strong> {formData.listingType} ({calculatedArea} m²)</p>
                                                     <p><strong>Price:</strong> {formData.pricePerMonth} SAR/month</p>
                                                     <br />
-                                                    <p className="step-note">When you click "List space", your listing will be submitted and shown to renters searching in your neighborhood.</p>
+                                                    <p className="step-note">When you click "List space", your listing will be submitted for admin approval. Once approved, it will be visible to renters.</p>
                                                 </div>
 
                                                 <div className="form-group">
@@ -650,19 +650,7 @@ export default function ListSpacePage() {
                                                     <p className="step-note">Upload a deed, leasing contract, or authorization proof for security verification.</p>
                                                 </div>
 
-                                                <div className="form-group">
-                                                    <span className="form-label">Initial listing status *</span>
-                                                    <div className="chip-row">
-                                                        <label className="chip-option">
-                                                            <input type="radio" name="listingStatus" value="active" checked={formData.listingStatus === 'active'} onChange={handleInputChange} required />
-                                                            <span>Active (visible to renters)</span>
-                                                        </label>
-                                                        <label className="chip-option">
-                                                            <input type="radio" name="listingStatus" value="inactive" checked={formData.listingStatus === 'inactive'} onChange={handleInputChange} />
-                                                            <span>Inactive (not visible)</span>
-                                                        </label>
-                                                    </div>
-                                                </div>
+
 
                                                 <div className="step-actions step-actions--split">
                                                     <button type="button" className="btn btn-outline prev-btn" onClick={prevStep} disabled={loading}>Back</button>

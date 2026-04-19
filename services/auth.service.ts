@@ -133,6 +133,30 @@ export async function login(
     data: z.infer<typeof loginSchema>
 ): Promise<{ token: string; user: object; isFirstLogin: boolean }> {
 
+    // 0. Try auth as Admin (hardcoded credentials — no DB table)
+    if (data.email === 'Admin' && data.password === 'Admin@123') {
+        const payload: TokenPayload = {
+            id: 0,
+            email: 'admin@siaa.sa',
+            userType: 'admin',
+            firstName: 'Admin',
+        };
+        const token = await signToken(payload);
+        return {
+            token,
+            user: {
+                id: 0,
+                email: 'admin@siaa.sa',
+                firstName: 'Admin',
+                lastName: '',
+                userType: 'admin',
+                accountStatus: 'Active',
+            },
+            isFirstLogin: false,
+        };
+    }
+
+
     // 1. Try auth as Seeker
     const seeker = await findSeekerByEmail(data.email);
     if (seeker) {

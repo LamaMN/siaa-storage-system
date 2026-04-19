@@ -34,7 +34,12 @@ export default function LoginPage() {
             localStorage.setItem('siaaUser', JSON.stringify(data.user));
             localStorage.setItem('siaaIsFirstLogin', data.isFirstLogin ? 'true' : 'false');
 
-            window.location.href = '/dashboard';
+            // Redirect admin to admin dashboard, others to user dashboard
+            if (data.user.userType === 'admin') {
+                window.location.href = '/admin';
+            } else {
+                window.location.href = '/dashboard';
+            }
         } catch {
             setError('Network error. Please try again.');
         } finally {
