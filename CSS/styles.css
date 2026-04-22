@@ -3354,7 +3354,8 @@ body {
     height: 0;
     border-left: 18px solid transparent;
     border-right: 18px solid transparent;
-    border-bottom: 31px solid #0056b3; /* Brand Blue */
+    border-bottom: 31px solid #0056b3;
+    /* Brand Blue */
     animation: loaderJumpTriangle 1.5s ease-in-out infinite;
     animation-delay: 0s;
 }
@@ -3363,9 +3364,11 @@ body {
 .loader-diamond {
     width: 26px;
     height: 26px;
-    background-color: #0056b3; /* Brand Blue */
+    background-color: #0056b3;
+    /* Brand Blue */
     transform: rotate(45deg);
-    border-radius: 4px; /* Smooth edges */
+    border-radius: 4px;
+    /* Smooth edges */
     animation: loaderJumpDiamond 1.5s ease-in-out infinite;
     animation-delay: 0.15s;
 }
@@ -3374,7 +3377,8 @@ body {
 .loader-circle {
     width: 32px;
     height: 32px;
-    background-color: #0056b3; /* Brand Blue */
+    background-color: #0056b3;
+    /* Brand Blue */
     border-radius: 50%;
     animation: loaderJumpCircle 1.5s ease-in-out infinite;
     animation-delay: 0.3s;
@@ -3385,22 +3389,29 @@ body {
         transform: translateY(0);
         border-bottom-color: #0056b3;
     }
+
     24.99% {
         border-bottom-color: #0056b3;
     }
+
     25% {
-        border-bottom-color: #ff6b35; /* Orange */
+        border-bottom-color: #ff6b35;
+        /* Orange */
     }
+
     50% {
         transform: translateY(-20px);
         border-bottom-color: #ff6b35;
     }
+
     75% {
         border-bottom-color: #ff6b35;
     }
+
     75.01% {
         border-bottom-color: #0056b3;
     }
+
     100% {
         transform: translateY(0);
         border-bottom-color: #0056b3;
@@ -3412,22 +3423,28 @@ body {
         transform: translateY(0) rotate(45deg);
         background-color: #0056b3;
     }
+
     24.99% {
         background-color: #0056b3;
     }
+
     25% {
         background-color: #ff6b35;
     }
+
     50% {
         transform: translateY(-20px) rotate(45deg);
         background-color: #ff6b35;
     }
+
     75% {
         background-color: #ff6b35;
     }
+
     75.01% {
         background-color: #0056b3;
     }
+
     100% {
         transform: translateY(0) rotate(45deg);
         background-color: #0056b3;
@@ -3439,24 +3456,37 @@ body {
         transform: translateY(0);
         background-color: #0056b3;
     }
+
     24.99% {
         background-color: #0056b3;
     }
+
     25% {
         background-color: #ff6b35;
     }
+
     50% {
         transform: translateY(-20px);
         background-color: #ff6b35;
     }
+
     75% {
         background-color: #ff6b35;
     }
+
     75.01% {
         background-color: #0056b3;
     }
+
     100% {
         transform: translateY(0);
         background-color: #0056b3;
     }
+}
+
+/* RTL alignment fix for About cards */
+html[dir="rtl"] .about-text,
+html[dir="rtl"] .about-headline,
+html[dir="rtl"] .about-description {
+    text-align: right;
 }
