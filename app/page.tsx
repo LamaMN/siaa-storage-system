@@ -1,4 +1,7 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { translations, type Language } from '@/lib/translations';
+import LanguageToggle from '@/app/components/LanguageToggle';
 
 export const metadata: Metadata = {
     title: "Si'aa — Store Smart. Nearby. Hassle-Free.",
@@ -24,24 +27,34 @@ const organizationSchema = {
     serviceType: 'Storage Solutions',
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+    const cookieStore = await cookies();
+    const lang = (cookieStore.get('lang')?.value === 'ar' ? 'ar' : 'en') as Language;
+    const t = translations[lang];
+
     return (
         <>
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-            />
-
-            {/* Header */}
             <header className="header">
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                    <LanguageToggle />
+                </div>
+
                 <div className="container">
                     <div className="header-content">
-                        <a href="/register" className="btn btn-primary btn-header" style={{ width: 'auto', flexShrink: 0, whiteSpace: 'nowrap' }}>Get Started</a>
+                        <a
+                            href="/register"
+                            className="btn btn-primary btn-header"
+                            style={{ width: 'auto', flexShrink: 0, whiteSpace: 'nowrap' }}
+                        >
+                            {t.getStarted}
+                        </a>
+
                         <nav className="nav">
-                            <a href="#about">About</a>
-                            <a href="#features">Features</a>
-                            <a href="#how-it-works">How It Works</a>
+                            <a href="#about">{t.about}</a>
+                            <a href="#features">{t.features}</a>
+                            <a href="#how-it-works">{t.howItWorks}</a>
                         </nav>
+
                         <div className="logo">
                             <img src="/Media/Logo.png" alt="Si'aa Logo" className="logo-img" />
                         </div>
