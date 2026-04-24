@@ -6,7 +6,24 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
     AreaChart, Area, LineChart, Line,
 } from 'recharts';
+import LanguageToggle from '@/app/components/LanguageToggle';
+import { translations, type Language } from '@/lib/translations';
 
+function getCurrentLang(): Language {
+    if (typeof document === 'undefined') return 'en';
+
+    const match = document.cookie.match(/(?:^|; )lang=([^;]+)/);
+    return match?.[1] === 'ar' ? 'ar' : 'en';
+}
+function usePageLanguage(): Language {
+    const [lang, setLang] = useState<Language>(() => getCurrentLang());
+
+    useEffect(() => {
+        setLang(getCurrentLang());
+    }, []);
+
+    return lang;
+}
 
 interface User {
     id: number;
@@ -74,6 +91,7 @@ interface Stats {
     CompletedBookings?: number;
 }
 
+
 function formatDate(d?: string) {
     if (!d) return 'N/A';
     return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -91,6 +109,8 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
+    const lang = usePageLanguage();
+    const t = translations[lang];
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [token, setToken] = useState<string>('');
     const [activeSection, setActiveSection] = useState('profileSection');
@@ -243,7 +263,7 @@ export default function DashboardPage() {
     }
 
     async function handleDeleteSpace(spaceId: number) {
-        if (!confirm('Are you sure you want to delete this space? This cannot be undone.')) return;
+        if (!confirm(t.confirmDeleteSpace)) return;
         const res = await fetch(`/api/spaces/${spaceId}`, {
             method: 'DELETE',
             headers: authHeaders(token),
@@ -252,12 +272,12 @@ export default function DashboardPage() {
             setProviderSpaces(prev => prev.filter(s => s.SpaceID !== spaceId));
         } else {
             const d = await res.json();
-            alert(d.error || 'Failed to delete space');
+            alert(d.error || t.failedToDeleteSpace);
         }
     }
 
     async function handleCancelBooking(bookingId: number) {
-        if (!confirm('Are you sure you want to cancel this booking?')) return;
+        if (!confirm(t.confirmCancelBooking)) return;
         const res = await fetch(`/api/bookings/${bookingId}`, {
             method: 'DELETE',
             headers: authHeaders(token),
@@ -268,7 +288,7 @@ export default function DashboardPage() {
             ));
         } else {
             const d = await res.json();
-            alert(d.error || 'Failed to cancel booking');
+            alert(d.error || t.failedToCancelBooking);
         }
     }
 
@@ -284,14 +304,14 @@ export default function DashboardPage() {
             ));
         } else {
             const d = await res.json();
-            alert(d.error || 'Failed to update status');
+            alert(d.error || t.failedToUpdateStatus);
         }
     }
 
     async function handleSubmitReview() {
         if (!reviewModal || !currentUser) return;
-        if (reviewRating === 0) { setReviewError('Please select a rating'); return; }
-        if (reviewComment.length < 10) { setReviewError('Review must be at least 10 characters'); return; }
+        if (reviewRating === 0) { setReviewError(t.pleaseSelectRating); return; }
+        if (reviewComment.length < 10) { setReviewError(t.reviewMinCharacters); return; }
 
         const res = await fetch(`/api/bookings/${reviewModal.BookingID}/review`, {
             method: 'POST',
@@ -305,17 +325,17 @@ export default function DashboardPage() {
             ));
         } else {
             const d = await res.json();
-            setReviewError(d.error || 'Failed to submit review');
+            setReviewError(d.error || t.failedToSubmitReview);
         }
     }
 
     async function handleSaveProfile() {
         if (!currentUser) return;
         setProfileSaving(true);
-        
+
         let body: BodyInit;
         let headers: Record<string, string> = { 'Authorization': `Bearer ${token}` };
-        
+
         if (profilePicFile) {
             const formData = new FormData();
             formData.append('profilePicture', profilePicFile);
@@ -347,7 +367,7 @@ export default function DashboardPage() {
             setProfileEditing(false);
             setProfilePicFile(null);
         } else {
-            alert('Failed to save profile');
+            alert(t.failedToSaveProfile);
         }
         setProfileSaving(false);
     }
@@ -362,7 +382,7 @@ export default function DashboardPage() {
             setProviderBookings(prev => prev.filter(b => b.BookingID !== bookingId));
         } else {
             const d = await res.json();
-            alert(d.error || 'Failed to dismiss booking');
+            alert(d.error || t.failedToDismissBooking);
         }
     }
 
@@ -376,20 +396,29 @@ export default function DashboardPage() {
 
     const isProvider = currentUser.userType === 'provider';
     const welcomeMessage = isFirstLogin
-        ? `Welcome, ${currentUser.firstName}! 👋`
-        : `Welcome back, ${currentUser.firstName}!`;
+        ? `${t.welcome}, ${currentUser.firstName}! 👋`
+        : `${t.welcomeBack}, ${currentUser.firstName}!`;
 
     return (
         <>
             <header className="header">
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                    <LanguageToggle />
+                </div>
+
                 <div className="container">
                     <div className="header-content">
-                        <nav className="nav">
-                            <a href="/#about">About</a>
-                            <a href="/#features">Features</a>
-                        </nav>
+                        {/* Navigation temporarily disabled */}
+                        {/*
+    <nav className="nav">
+        <a href="#about">{t.about}</a>
+        <a href="#features">{t.features}</a>
+        <a href="#how-it-works">{t.howItWorks}</a>
+    </nav>
+    */}
+
                         <div className="logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
                     </div>
                 </div>
@@ -400,39 +429,65 @@ export default function DashboardPage() {
                 <aside className="sideBar">
                     <a href="#" className={`sideBar-link ${activeSection === 'profileSection' ? 'is-active' : ''}`}
                         onClick={e => { e.preventDefault(); setActiveSection('profileSection'); }}>
-                        <i className="fa-solid fa-user"></i> Profile
-                    </a>
+                        <i className="fa-solid fa-user"></i> {t.profile}                    </a>
                     {isProvider ? (
                         <>
-                            <a href="#" className={`sideBar-link ${activeSection === 'spacesSection' ? 'is-active' : ''}`}
-                                onClick={e => { e.preventDefault(); setActiveSection('spacesSection'); }}>
-                                <i className="fa-solid fa-box"></i> My Spaces
+                            <a
+                                href="#"
+                                className={`sideBar-link ${activeSection === 'spacesSection' ? 'is-active' : ''}`}
+                                onClick={e => { e.preventDefault(); setActiveSection('spacesSection'); }}
+                            >
+                                <i className="fa-solid fa-box"></i> {t.mySpaces}
                             </a>
-                            <a href="#" className={`sideBar-link ${activeSection === 'bookingsSection' ? 'is-active' : ''}`}
-                                onClick={e => { e.preventDefault(); setActiveSection('bookingsSection'); }}>
-                                <i className="fa-solid fa-calendar-check"></i> Booking Requests
+
+                            <a
+                                href="#"
+                                className={`sideBar-link ${activeSection === 'bookingsSection' ? 'is-active' : ''}`}
+                                onClick={e => { e.preventDefault(); setActiveSection('bookingsSection'); }}
+                            >
+                                <i className="fa-solid fa-calendar-check"></i> {t.bookingRequests}
                             </a>
-                            <a href="#" className={`sideBar-link ${activeSection === 'calendarSection' ? 'is-active' : ''}`}
-                                onClick={e => { e.preventDefault(); setActiveSection('calendarSection'); }}>
-                                <i className="fa-solid fa-calendar-days"></i> Calendar
+
+                            <a
+                                href="#"
+                                className={`sideBar-link ${activeSection === 'calendarSection' ? 'is-active' : ''}`}
+                                onClick={e => { e.preventDefault(); setActiveSection('calendarSection'); }}
+                            >
+                                <i className="fa-solid fa-calendar-days"></i> {t.calendar}
                             </a>
                         </>
                     ) : (
-                        <a href="#" className={`sideBar-link ${activeSection === 'historySection' ? 'is-active' : ''}`}
-                            onClick={e => { e.preventDefault(); setActiveSection('historySection'); }}>
-                            <i className="fa-solid fa-clock-rotate-left"></i> My Bookings
+                        <a
+                            href="#"
+                            className={`sideBar-link ${activeSection === 'historySection' ? 'is-active' : ''}`}
+                            onClick={e => { e.preventDefault(); setActiveSection('historySection'); }}
+                        >
+                            <i className="fa-solid fa-clock-rotate-left"></i> {t.myBookings}
                         </a>
                     )}
-                    <a href="#" className={`sideBar-link ${activeSection === 'statsSection' ? 'is-active' : ''}`}
-                        onClick={e => { e.preventDefault(); setActiveSection('statsSection'); }}>
-                        <i className="fa-solid fa-chart-line"></i> Statistics
+
+                    <a
+                        href="#"
+                        className={`sideBar-link ${activeSection === 'statsSection' ? 'is-active' : ''}`}
+                        onClick={e => { e.preventDefault(); setActiveSection('statsSection'); }}
+                    >
+                        <i className="fa-solid fa-chart-line"></i> {t.statistics}
                     </a>
-                    <a href="#" className={`sideBar-link ${activeSection === 'settingsSection' ? 'is-active' : ''}`}
-                        onClick={e => { e.preventDefault(); setActiveSection('settingsSection'); }}>
-                        <i className="fa-solid fa-gear"></i> Settings
+
+                    <a
+                        href="#"
+                        className={`sideBar-link ${activeSection === 'settingsSection' ? 'is-active' : ''}`}
+                        onClick={e => { e.preventDefault(); setActiveSection('settingsSection'); }}
+                    >
+                        <i className="fa-solid fa-gear"></i> {t.settings}
                     </a>
-                    <a href="#" className="sideBar-link logout-link" onClick={e => { e.preventDefault(); logout(); }}>
-                        <i className="fa-solid fa-right-from-bracket"></i> Logout
+
+                    <a
+                        href="#"
+                        className="sideBar-link logout-link"
+                        onClick={e => { e.preventDefault(); logout(); }}
+                    >
+                        <i className="fa-solid fa-right-from-bracket"></i> {t.logout}
                     </a>
                 </aside>
 
@@ -443,28 +498,24 @@ export default function DashboardPage() {
                             <div className="dashboard-title-box">
                                 <h1 className="dashboard-title">{welcomeMessage}</h1>
                                 <p className="dashboard-subtitle" id="userRoleDisplay">
-                                    {isProvider ? 'Storage Provider' : 'Storage Seeker'}
-                                </p>
+                                    {isProvider ? t.storageProvider : t.storageSeeker}                                </p>
                             </div>
                             <a
                                 href={isProvider ? '/list-space' : '/search'}
                                 className="dashboard-btn"
                             >
-                                {isProvider ? 'List New Space' : 'Browse Spaces'}
-                            </a>
+                                {isProvider ? t.listNewSpace : t.browseSpaces}                            </a>
                         </div>
 
                         {/* Profile Section */}
                         <section id="profileSection" className={`dashboard-section ${activeSection === 'profileSection' ? 'is-active' : ''}`}>
-                            <h2 className="section-title">Profile</h2>
-                            <div className="profile-form">
+                            <h2 className="section-title">{t.profile}</h2>                            <div className="profile-form">
                                 <div className="profile-grid">
                                     <div className="form-group profile-picture-group">
-                                        <label className="form-label">Profile Picture (optional)</label>
-                                        <div className="profile-picture-wrapper">
+                                        <label className="form-label">{t.profilePictureOptional}</label>                                        <div className="profile-picture-wrapper">
                                             <div className={`profile-picture-preview ${profilePic ? 'has-image' : ''}`}>
                                                 {profilePic ? (
-                                                    <img src={profilePic} alt="Profile Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} onError={(e) => { e.currentTarget.src = '/Media/default-avatar.png'; }} />
+                                                    <img src={profilePic} alt={t.profilePreview} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} onError={(e) => { e.currentTarget.src = '/Media/default-avatar.png'; }} />
                                                 ) : (
                                                     <span className="profile-picture-placeholder">
                                                         <i className="fa-solid fa-user"></i>
@@ -481,54 +532,113 @@ export default function DashboardPage() {
                                                         reader.readAsDataURL(file);
                                                     }
                                                 }} />
-                                                <p className="profile-picture-hint">JPG, PNG, max 2MB. A clear front-facing photo works best.</p>
-                                            </div>
+                                                <p className="profile-picture-hint">
+                                                    {t.profilePictureHint}
+                                                </p>                                            </div>
                                         </div>
                                     </div>
                                     <div className="form-group">
-                                        <label htmlFor="profileFirstName">First Name</label>
-                                        <input type="text" id="profileFirstName" className="form-input"
-                                            value={profile.firstName} disabled={!profileEditing}
-                                            onChange={e => setProfile(p => ({ ...p, firstName: e.target.value }))} />
+                                        <label htmlFor="profileFirstName">{t.firstName}</label>
+                                        <input
+                                            type="text"
+                                            id="profileFirstName"
+                                            className="form-input"
+                                            value={profile.firstName}
+                                            disabled={!profileEditing}
+                                            onChange={e =>
+                                                setProfile(p => ({
+                                                    ...p,
+                                                    firstName: e.target.value
+                                                }))
+                                            }
+                                        />
                                     </div>
+
                                     <div className="form-group">
-                                        <label htmlFor="profileLastName">Last Name</label>
-                                        <input type="text" id="profileLastName" className="form-input"
-                                            value={profile.lastName} disabled={!profileEditing}
-                                            onChange={e => setProfile(p => ({ ...p, lastName: e.target.value }))} />
+                                        <label htmlFor="profileLastName">{t.lastName}</label>
+                                        <input
+                                            type="text"
+                                            id="profileLastName"
+                                            className="form-input"
+                                            value={profile.lastName}
+                                            disabled={!profileEditing}
+                                            onChange={e =>
+                                                setProfile(p => ({
+                                                    ...p,
+                                                    lastName: e.target.value
+                                                }))
+                                            }
+                                        />
                                     </div>
+
                                     <div className="form-group">
-                                        <label>Email</label>
-                                        <input type="email" className="form-input" value={profile.email} disabled />
+                                        <label>{t.email}</label>
+                                        <input
+                                            type="email"
+                                            className="form-input"
+                                            value={profile.email}
+                                            disabled
+                                        />
                                     </div>
+
                                     <div className="form-group">
-                                        <label htmlFor="profilePhone">Phone</label>
-                                        <input type="tel" id="profilePhone" className="form-input"
-                                            value={profile.phone} disabled={!profileEditing}
-                                            onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} />
+                                        <label htmlFor="profilePhone">{t.phone}</label>
+                                        <input
+                                            type="tel"
+                                            id="profilePhone"
+                                            className="form-input"
+                                            value={profile.phone}
+                                            disabled={!profileEditing}
+                                            onChange={e =>
+                                                setProfile(p => ({
+                                                    ...p,
+                                                    phone: e.target.value
+                                                }))
+                                            }
+                                        />
                                     </div>
+
                                     {!isProvider && (
                                         <div className="form-group">
-                                            <label>Company (optional)</label>
-                                            <input type="text" className="form-input"
-                                                value={profile.companyName} disabled={!profileEditing}
-                                                onChange={e => setProfile(p => ({ ...p, companyName: e.target.value }))} />
+                                            <label>{t.companyOptional}</label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={profile.companyName}
+                                                disabled={!profileEditing}
+                                                onChange={e =>
+                                                    setProfile(p => ({
+                                                        ...p,
+                                                        companyName: e.target.value
+                                                    }))
+                                                }
+                                            />
                                         </div>
                                     )}
+
                                     {isProvider && (
                                         <div className="form-group">
-                                            <label>Business Name</label>
-                                            <input type="text" className="form-input"
-                                                value={profile.businessName} disabled={!profileEditing}
-                                                onChange={e => setProfile(p => ({ ...p, businessName: e.target.value }))} />
+                                            <label>{t.businessName}</label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={profile.businessName}
+                                                disabled={!profileEditing}
+                                                onChange={e =>
+                                                    setProfile(p => ({
+                                                        ...p,
+                                                        businessName: e.target.value
+                                                    }))
+                                                }
+                                            />
                                         </div>
                                     )}
                                     <div className="form-group">
-                                        <label>Account Type</label>
+                                        <label>{t.accountType}</label>
                                         <input type="text" className="form-input" value={profile.role} disabled />
                                     </div>
                                     <div className="form-group">
-                                        <label>Account Status</label>
+                                        <label>{t.accountStatus}</label>
                                         <input type="text" className="form-input" value={profile.status} disabled />
                                     </div>
                                 </div>
@@ -538,7 +648,7 @@ export default function DashboardPage() {
                                         className="secondary-btn"
                                         onClick={() => setProfileEditing(!profileEditing)}
                                     >
-                                        {profileEditing ? 'Cancel' : 'Edit'}
+                                        {profileEditing ? t.cancel : t.edit}
                                     </button>
                                     {profileEditing && (
                                         <button
@@ -547,7 +657,7 @@ export default function DashboardPage() {
                                             onClick={handleSaveProfile}
                                             disabled={profileSaving}
                                         >
-                                            {profileSaving ? 'Saving...' : 'Save'}
+                                            {profileSaving ? t.saving : t.save}
                                         </button>
                                     )}
                                 </div>
@@ -557,7 +667,7 @@ export default function DashboardPage() {
                         {/* History Section (Seeker) */}
                         {(!isProvider) && (
                             <section id="historySection" className={`dashboard-section ${activeSection === 'historySection' ? 'is-active' : ''}`}>
-                                <h2 className="section-title">My Bookings</h2>
+                                <h2 className="section-title">{t.myBookings}</h2>
 
                                 {historyLoading && <Loader />}
 
@@ -565,12 +675,16 @@ export default function DashboardPage() {
                                 {!isProvider && !historyLoading && (
                                     <ul className="history-list">
                                         {seekerBookings.length === 0 && (
-                                            <p className="history-empty">No bookings yet. <a href="/search">Browse spaces</a> to get started.</p>
+                                            <p className="history-empty">
+                                                {t.noBookingsYet}{' '}
+                                                <a href="/search">{t.browseSpaces}</a>{' '}
+                                                {t.toGetStarted}
+                                            </p>
                                         )}
                                         {seekerBookings.map(booking => (
                                             <li key={booking.BookingID} className="history-item" style={{ position: 'relative' }}>
                                                 {booking.BookingStatus === 'Rejected' && (
-                                                    <button className="dismiss-btn" onClick={() => handleDismissBooking(booking.BookingID)} title="Dismiss">
+                                                    <button className="dismiss-btn" onClick={() => handleDismissBooking(booking.BookingID)} title={t.dismiss}>
                                                         <i className="fa-solid fa-xmark"></i>
                                                     </button>
                                                 )}
@@ -581,20 +695,20 @@ export default function DashboardPage() {
                                                             {booking.BookingStatus}
                                                         </span>
                                                         {Boolean(booking.HasReview) && (
-                                                            <span className="review-badge"><i className="fa-solid fa-check-circle"></i> Reviewed</span>
+                                                            <span className="review-badge"><i className="fa-solid fa-check-circle"></i> {t.reviewed}</span>
                                                         )}
                                                     </div>
                                                 </div>
                                                 <div className="history-item-details">
                                                     <p><i className="fa-solid fa-location-dot"></i> {booking.City}, {booking.AddressLine1}</p>
                                                     <p><i className="fa-solid fa-calendar"></i> {formatDate(booking.StartDate)} - {formatDate(booking.EndDate)}</p>
-                                                    <p><i className="fa-solid fa-user"></i> Provider: {booking.ProviderName}</p>
+                                                    <p><i className="fa-solid fa-user"></i>  {t.provider}: {booking.ProviderName}</p>
                                                     <p><i className="fa-solid fa-box"></i> {booking.SpaceType} · {booking.Size} m²</p>
                                                 </div>
                                                 <div className="history-item-footer">
                                                     <div className="history-item-footer-left">
-                                                        <span className="history-item-date">Booked: {formatDate(booking.CreatedAt)}</span><br />
-                                                        <span className="history-item-price">{formatPrice(booking.TotalAmount)} SAR</span>
+                                                        <span className="history-item-date">{t.booked}: {formatDate(booking.CreatedAt)}</span><br />
+                                                        <span className="history-item-price">{formatPrice(booking.TotalAmount)} {t.sar}</span>
                                                     </div>
                                                     <div className="history-item-footer-right">
                                                         {booking.BookingStatus === 'Pending' && (
@@ -602,7 +716,7 @@ export default function DashboardPage() {
                                                                 className="btn btn-outline btn-small"
                                                                 onClick={() => handleCancelBooking(booking.BookingID)}
                                                             >
-                                                                Cancel
+                                                                {t.cancel}
                                                             </button>
                                                         )}
                                                         {booking.BookingStatus === 'Completed' && !booking.HasReview && (
@@ -610,7 +724,7 @@ export default function DashboardPage() {
                                                                 className="btn btn-outline btn-small review-btn"
                                                                 onClick={() => { setReviewModal(booking); setReviewRating(0); setReviewComment(''); setReviewError(''); }}
                                                             >
-                                                                <i className="fa-solid fa-star"></i> Write Review
+                                                                <i className="fa-solid fa-star"></i>{t.writeReview}
                                                             </button>
                                                         )}
                                                     </div>
@@ -626,13 +740,13 @@ export default function DashboardPage() {
                         {/* Spaces Section (Provider) */}
                         {isProvider && (
                             <section id="spacesSection" className={`dashboard-section ${activeSection === 'spacesSection' ? 'is-active' : ''}`}>
-                                <h2 className="section-title">Your Listed Spaces</h2>
+                                <h2 className="section-title">{t.yourListedSpaces}</h2>
                                 {historyLoading && <Loader />}
                                 {!historyLoading && (
                                     <div>
                                         <ul className="history-list">
                                             {providerSpaces.length === 0 && (
-                                                <p className="history-empty">No spaces listed yet. <a href="/list-space">List a space</a> to start earning!</p>
+                                                <p className="history-empty">{t.noSpacesListedYet} <a href="/list-space">{t.listASpace}</a> {t.toStartEarning}</p>
                                             )}
                                             {providerSpaces.map(space => (
                                                 <li key={space.SpaceID} className="history-item">
@@ -643,18 +757,18 @@ export default function DashboardPage() {
                                                     <div className="history-item-details">
                                                         <p><i className="fa-solid fa-location-dot"></i> {space.City}, {space.AddressLine1}</p>
                                                         <p><i className="fa-solid fa-box"></i> {space.SpaceType} · {space.Size} m²</p>
-                                                        <p><i className="fa-solid fa-heart"></i> {space.FavoriteCount} favorites · {space.TotalBookings} bookings</p>
+                                                        <p><i className="fa-solid fa-heart"></i> {space.FavoriteCount} {t.favorites} · {space.TotalBookings} {t.bookings}</p>
                                                     </div>
                                                     <div className="history-item-footer">
                                                         <span className="history-item-price">{formatPrice(space.PricePerMonth)} SAR/month</span>
-                                                        <span className="history-item-date">Listed: {formatDate(space.CreatedAt)}</span>
+                                                        <span className="history-item-date">{t.listed} {formatDate(space.CreatedAt)}</span>
                                                     </div>
                                                     <div className="history-item-footer" style={{ marginTop: '0.5rem', justifyContent: 'flex-end', gap: '0.5rem' }}>
                                                         <a href={`/edit-space/${space.SpaceID}`} className="btn btn-outline btn-small" style={{ borderColor: '#f97316', color: '#f97316' }}>
-                                                            <i className="fa-solid fa-pen"></i> Edit
+                                                            <i className="fa-solid fa-pen"></i> {t.edit}
                                                         </a>
                                                         <button className="btn btn-outline btn-small" style={{ borderColor: '#6b7280', color: '#6b7280' }} onClick={() => handleDeleteSpace(space.SpaceID)}>
-                                                            <i className="fa-solid fa-trash"></i> Delete
+                                                            <i className="fa-solid fa-trash"></i> {t.delete}
                                                         </button>
                                                     </div>
                                                 </li>
@@ -668,16 +782,16 @@ export default function DashboardPage() {
                         {/* Bookings Section (Provider) */}
                         {isProvider && (
                             <section id="bookingsSection" className={`dashboard-section ${activeSection === 'bookingsSection' ? 'is-active' : ''}`}>
-                                <h2 className="section-title">Incoming Booking Requests</h2>
+                                <h2 className="section-title">{t.incomingBookingRequests}</h2>
                                 {historyLoading && <Loader />}
                                 {!historyLoading && (
                                     <div>
                                         <ul className="history-list">
-                                            {providerBookings.length === 0 && <p>No booking requests yet.</p>}
+                                            {providerBookings.length === 0 && <p>{t.noBookingRequestsYet}</p>}
                                             {providerBookings.map(booking => (
                                                 <li key={booking.BookingID} className="history-item" style={{ position: 'relative' }}>
                                                     {booking.BookingStatus === 'Rejected' && (
-                                                        <button className="dismiss-btn" onClick={() => handleDismissBooking(booking.BookingID)} title="Dismiss">
+                                                        <button className="dismiss-btn" onClick={() => handleDismissBooking(booking.BookingID)} title={t.dismiss}>
                                                             <i className="fa-solid fa-xmark"></i>
                                                         </button>
                                                     )}
@@ -688,7 +802,7 @@ export default function DashboardPage() {
                                                         </span>
                                                     </div>
                                                     <div className="history-item-details">
-                                                        <p><i className="fa-solid fa-user"></i> Seeker: {booking.SeekerName} · {booking.SeekerEmail}</p>
+                                                        <p><i className="fa-solid fa-user"></i>  {t.seeker}: {booking.SeekerName} · {booking.SeekerEmail}</p>
                                                         <p><i className="fa-solid fa-calendar"></i> {formatDate(booking.StartDate)} - {formatDate(booking.EndDate)}</p>
                                                         <p><i className="fa-solid fa-money-bill"></i> {formatPrice(booking.TotalAmount)} SAR</p>
                                                     </div>
@@ -696,11 +810,11 @@ export default function DashboardPage() {
                                                         <div className="history-item-footer" style={{ gap: '0.5rem' }}>
                                                             <button className="btn btn-dark btn-small"
                                                                 onClick={() => handleUpdateBookingStatus(booking.BookingID, 'Confirmed')}>
-                                                                Confirm
+                                                                {t.confirm}
                                                             </button>
                                                             <button className="btn btn-outline btn-small"
                                                                 onClick={() => handleUpdateBookingStatus(booking.BookingID, 'Rejected')}>
-                                                                Reject
+                                                                {t.reject}
                                                             </button>
                                                         </div>
                                                     )}
@@ -708,7 +822,7 @@ export default function DashboardPage() {
                                                         <div className="history-item-footer">
                                                             <button className="btn btn-dark btn-small"
                                                                 onClick={() => handleUpdateBookingStatus(booking.BookingID, 'Active')}>
-                                                                Mark Active
+                                                                {t.markActive}
                                                             </button>
                                                         </div>
                                                     )}
@@ -716,7 +830,7 @@ export default function DashboardPage() {
                                                         <div className="history-item-footer">
                                                             <button className="btn btn-dark btn-small"
                                                                 onClick={() => handleUpdateBookingStatus(booking.BookingID, 'Completed')}>
-                                                                Mark Completed
+                                                                {t.markCompleted}
                                                             </button>
                                                         </div>
                                                     )}
@@ -731,7 +845,7 @@ export default function DashboardPage() {
                         {/* Calendar Section (Provider) */}
                         {isProvider && (
                             <section id="calendarSection" className={`dashboard-section ${activeSection === 'calendarSection' ? 'is-active' : ''}`}>
-                                <h2 className="section-title">Booking Calendar</h2>
+                                <h2 className="section-title">{t.bookingCalendar}</h2>
 
                                 {(() => {
                                     const SPACE_COLORS = ['#ff6b35', '#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
@@ -739,8 +853,10 @@ export default function DashboardPage() {
                                     const month = calendarMonth.getMonth();
                                     const firstDay = new Date(year, month, 1).getDay();
                                     const daysInMonth = new Date(year, month + 1, 0).getDate();
-                                    const monthLabel = calendarMonth.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-
+                                    const monthLabel = calendarMonth.toLocaleDateString(
+                                        lang === 'ar' ? 'ar-SA' : 'en-US',
+                                        { year: 'numeric', month: 'long' }
+                                    );
                                     // Build unique spaces list from calendar bookings
                                     const uniqueSpaces = Array.from(new Map(calendarBookings.map(b => [b.SpaceID, b.SpaceTitle])).entries())
                                         .map(([id, title], i) => ({ id, title, color: SPACE_COLORS[i % SPACE_COLORS.length] }));
@@ -774,7 +890,7 @@ export default function DashboardPage() {
                                                     value={calendarFilter === 'all' ? 'all' : String(calendarFilter)}
                                                     onChange={e => setCalendarFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
                                                 >
-                                                    <option value="all">All Spaces</option>
+                                                    <option value="all">{t.allSpaces}</option>
                                                     {uniqueSpaces.map(s => (
                                                         <option key={s.id} value={s.id}>{s.title}</option>
                                                     ))}
@@ -782,7 +898,7 @@ export default function DashboardPage() {
                                             </div>
 
                                             <div className="calendar-grid">
-                                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                                                {t.weekDays.map(d => (
                                                     <div key={d} className="calendar-day-header">{d}</div>
                                                 ))}
 
@@ -832,7 +948,7 @@ export default function DashboardPage() {
                                             )}
 
                                             {calendarBookings.length === 0 && (
-                                                <p className="history-empty" style={{ marginTop: '1.5rem' }}>No confirmed bookings yet. Your calendar will populate as bookings come in.</p>
+                                                <p className="history-empty" style={{ marginTop: '1.5rem' }}>{t.noConfirmedBookingsYet}</p>
                                             )}
                                         </div>
                                     );
@@ -842,7 +958,7 @@ export default function DashboardPage() {
 
                         {/* Stats Section */}
                         <section id="statsSection" className={`dashboard-section ${activeSection === 'statsSection' ? 'is-active' : ''}`}>
-                            <h2 className="section-title">Statistics</h2>
+                            <h2 className="section-title">{t.statistics}</h2>
 
                             {/* ── KPI Cards ───────────────────────────────── */}
                             <div className="stats-grid">
@@ -850,56 +966,56 @@ export default function DashboardPage() {
                                     <div className="stat-icon"><i className="fa-solid fa-box"></i></div>
                                     <div className="stat-content">
                                         <h3 className="stat-value">{isProvider ? (stats.TotalSpaces || 0) : (stats.TotalBookings || 0)}</h3>
-                                        <p className="stat-label">{isProvider ? 'Total Spaces' : 'Total Bookings'}</p>
+                                        <p className="stat-label">{isProvider ? t.totalSpaces : t.totalBookings}</p>
                                     </div>
                                 </div>
                                 <div className="stat-card">
                                     <div className="stat-icon"><i className="fa-solid fa-check-circle"></i></div>
                                     <div className="stat-content">
                                         <h3 className="stat-value">{stats.ActiveBookings || stats.ActiveSpaces || 0}</h3>
-                                        <p className="stat-label">Active</p>
+                                        <p className="stat-label">{t.active}</p>
                                     </div>
                                 </div>
                                 <div className="stat-card">
                                     <div className="stat-icon"><i className="fa-solid fa-clock"></i></div>
                                     <div className="stat-content">
                                         <h3 className="stat-value">{stats.PendingBookings || stats.PendingBookingRequests || 0}</h3>
-                                        <p className="stat-label">Pending</p>
+                                        <p className="stat-label">{t.pending}</p>
                                     </div>
                                 </div>
                                 <div className="stat-card">
                                     <div className="stat-icon"><i className="fa-solid fa-chart-line"></i></div>
                                     <div className="stat-content">
                                         <h3 className="stat-value">{formatPrice(isProvider ? stats.TotalRevenue : stats.TotalSpent)} SAR</h3>
-                                        <p className="stat-label">{isProvider ? 'Total Revenue' : 'Total Spent'}</p>
+                                        <p className="stat-label">{isProvider ? t.totalRevenue : t.totalSpent}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* ── Shared data ─────────────────────────────── */}
                             {(() => {
-                                const bookings  = isProvider ? providerBookings : seekerBookings;
+                                const bookings = isProvider ? providerBookings : seekerBookings;
 
                                 // Count statuses directly from the bookings array
-                                const active    = bookings.filter(b => ['Active', 'Confirmed'].includes(b.BookingStatus)).length;
-                                const pending   = bookings.filter(b => ['Pending', 'UnderReview'].includes(b.BookingStatus)).length;
+                                const active = bookings.filter(b => ['Active', 'Confirmed'].includes(b.BookingStatus)).length;
+                                const pending = bookings.filter(b => ['Pending', 'UnderReview'].includes(b.BookingStatus)).length;
                                 const completed = bookings.filter(b => b.BookingStatus === 'Completed').length;
                                 const cancelled = bookings.filter(b => ['Cancelled', 'Rejected'].includes(b.BookingStatus)).length;
-                                const total     = bookings.length;
+                                const total = bookings.length;
 
                                 const PIE_COLORS = ['#ff6b35', '#3b82f6', '#10b981', '#ef4444', '#94a3b8'];
                                 const pieData = [
-                                    { name: 'Active',    value: active },
-                                    { name: 'Pending',   value: pending },
-                                    { name: 'Completed', value: completed },
-                                    ...(cancelled > 0 ? [{ name: 'Cancelled', value: cancelled }] : []),
+                                    { name: t.active, value: active },
+                                    { name: t.pending, value: pending },
+                                    { name: t.completed, value: completed },
+                                    ...(cancelled > 0 ? [{ name: t.cancelled, value: cancelled }] : []),
                                 ].filter(d => d.value > 0);
 
                                 const barData = [
-                                    { name: 'Active',    count: active,    fill: '#ff6b35' },
-                                    { name: 'Pending',   count: pending,   fill: '#3b82f6' },
-                                    { name: 'Completed', count: completed, fill: '#10b981' },
-                                    ...(cancelled > 0 ? [{ name: 'Cancelled', count: cancelled, fill: '#ef4444' }] : []),
+                                    { name: t.active, count: active, fill: '#ff6b35' },
+                                    { name: t.pending, count: pending, fill: '#3b82f6' },
+                                    { name: t.completed, count: completed, fill: '#10b981' },
+                                    ...(cancelled > 0 ? [{ name: t.cancelled, count: cancelled, fill: '#ef4444' }] : []),
                                 ];
 
                                 // Last 6 months
@@ -922,9 +1038,9 @@ export default function DashboardPage() {
                                     bookings: bookings.filter(b => { const d = b.CreatedAt || b.StartDate; return d && d.slice(0, 7) === key; }).length,
                                 }));
 
-                                const hasStatus  = total > 0;
-                                const hasRevData = revenueData.some(d => d.revenue  > 0);
-                                const hasBkData  = bookingsData.some(d => d.bookings > 0);
+                                const hasStatus = total > 0;
+                                const hasRevData = revenueData.some(d => d.revenue > 0);
+                                const hasBkData = bookingsData.some(d => d.bookings > 0);
 
                                 const card = (children: React.ReactNode) => (
                                     <div style={{
@@ -941,7 +1057,7 @@ export default function DashboardPage() {
                                 );
                                 const empty = (h = 200) => (
                                     <div style={{ height: h, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e0', fontSize: '13px' }}>
-                                        No data yet
+                                        {t.noDataYet}
                                     </div>
                                 );
 
@@ -952,20 +1068,31 @@ export default function DashboardPage() {
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.25rem', alignItems: 'stretch' }}>
 
                                             {card(<>
-                                                {chartTitle(isProvider ? 'Revenue Over Time' : 'Spending Over Time', '· last 6 months · SAR')}
+                                                {chartTitle(
+                                                    isProvider ? t.revenueOverTime : t.spendingOverTime,
+                                                    `· ${t.last6Months} · ${t.currency}`
+                                                )}
                                                 {hasRevData ? (
                                                     <ResponsiveContainer width="100%" height={230}>
                                                         <AreaChart data={revenueData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                                                             <defs>
                                                                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                                                                    <stop offset="5%"  stopColor="#ff6b35" stopOpacity={0.15} />
-                                                                    <stop offset="95%" stopColor="#ff6b35" stopOpacity={0}    />
+                                                                    <stop offset="5%" stopColor="#ff6b35" stopOpacity={0.15} />
+                                                                    <stop offset="95%" stopColor="#ff6b35" stopOpacity={0} />
                                                                 </linearGradient>
                                                             </defs>
                                                             <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false} />
                                                             <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                                                             <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={45} />
-                                                            <Tooltip formatter={(v: any) => [`${v} SAR`, isProvider ? 'Revenue' : 'Spent']} contentStyle={{ borderRadius: '10px', fontSize: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+                                                            <Tooltip
+                                                                formatter={(v: any) => [`${v} ${t.currency}`, isProvider ? t.revenue : t.spent]}
+                                                                contentStyle={{
+                                                                    borderRadius: '10px',
+                                                                    fontSize: '12px',
+                                                                    border: '1px solid #e2e8f0',
+                                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                                                                }}
+                                                            />
                                                             <Area type="monotone" dataKey="revenue" stroke="#ff6b35" strokeWidth={2.5} fill="url(#revGrad)" dot={{ r: 4, fill: '#ff6b35', strokeWidth: 0 }} activeDot={{ r: 6 }} />
                                                         </AreaChart>
                                                     </ResponsiveContainer>
@@ -973,14 +1100,14 @@ export default function DashboardPage() {
                                             </>)}
 
                                             {card(<>
-                                                {chartTitle(isProvider ? 'Space Status' : 'Booking Status')}
+                                                {chartTitle(isProvider ? t.spaceStatus : t.bookingStatus)}
                                                 {hasStatus ? (
                                                     <ResponsiveContainer width="100%" height={230}>
                                                         <PieChart>
                                                             <Pie data={pieData} cx="50%" cy="45%" innerRadius={60} outerRadius={88} paddingAngle={3} dataKey="value">
                                                                 {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                                                             </Pie>
-                                                            <Tooltip formatter={(v: any) => [v, 'Count']} contentStyle={{ borderRadius: '10px', fontSize: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+                                                            <Tooltip formatter={(v: any) => [v, t.count]} contentStyle={{ borderRadius: '10px', fontSize: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
                                                             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
                                                         </PieChart>
                                                     </ResponsiveContainer>
@@ -992,20 +1119,20 @@ export default function DashboardPage() {
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', alignItems: 'stretch' }}>
 
                                             {card(<>
-                                                {chartTitle('Bookings Over Time', '· last 6 months')}
+                                                {chartTitle(t.bookingsOverTime, `· ${t.last6Months}`)}
                                                 {hasBkData ? (
                                                     <ResponsiveContainer width="100%" height={200}>
                                                         <AreaChart data={bookingsData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                                                             <defs>
                                                                 <linearGradient id="bkGrad" x1="0" y1="0" x2="0" y2="1">
-                                                                    <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.15} />
-                                                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}    />
+                                                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
+                                                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                                                 </linearGradient>
                                                             </defs>
                                                             <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false} />
                                                             <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                                                             <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={30} />
-                                                            <Tooltip formatter={(v: any) => [v, 'Bookings']} contentStyle={{ borderRadius: '10px', fontSize: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+                                                            <Tooltip formatter={(v: any) => [v, t.bookings]} contentStyle={{ borderRadius: '10px', fontSize: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
                                                             <Area type="monotone" dataKey="bookings" stroke="#3b82f6" strokeWidth={2.5} fill="url(#bkGrad)" dot={{ r: 4, fill: '#3b82f6', strokeWidth: 0 }} activeDot={{ r: 6 }} />
                                                         </AreaChart>
                                                     </ResponsiveContainer>
@@ -1013,14 +1140,14 @@ export default function DashboardPage() {
                                             </>)}
 
                                             {card(<>
-                                                {chartTitle('Count by Status')}
+                                                {chartTitle(t.countByStatus)}
                                                 {hasStatus ? (
                                                     <ResponsiveContainer width="100%" height={200}>
                                                         <BarChart data={barData} barSize={32} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                                                             <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false} />
                                                             <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                                                             <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={30} />
-                                                            <Tooltip formatter={(v: any) => [v, 'Count']} contentStyle={{ borderRadius: '10px', fontSize: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} cursor={{ fill: '#f8fafc' }} />
+                                                            <Tooltip formatter={(v: any) => [v, t.count]} contentStyle={{ borderRadius: '10px', fontSize: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} cursor={{ fill: '#f8fafc' }} />
                                                             <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                                                                 {barData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                                                             </Bar>
@@ -1037,7 +1164,7 @@ export default function DashboardPage() {
 
                         {/* Settings Section */}
                         <section id="settingsSection" className={`dashboard-section ${activeSection === 'settingsSection' ? 'is-active' : ''}`}>
-                            <h2 className="section-title">Settings</h2>
+                            <h2 className="section-title">{t.settings}</h2>
 
                             <form className="profile-form" onSubmit={async (e) => {
                                 e.preventDefault();
@@ -1051,20 +1178,20 @@ export default function DashboardPage() {
                                 {/* Bank Information (Provider Only) */}
                                 {isProvider && (
                                     <div className="settings-card">
-                                        <h3 className="settings-card-title"><i className="fa-solid fa-building-columns"></i> Bank Information</h3>
-                                        <p className="settings-hint">Where should we send your payouts?</p>
+                                        <h3 className="settings-card-title"><i className="fa-solid fa-building-columns"></i> {t.bankInformation}</h3>
+                                        <p className="settings-hint">{t.whereShouldWeSendYourPayouts}</p>
                                         <div className="profile-grid" style={{ marginBottom: 0 }}>
                                             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                                <label>IBAN Number</label>
-                                                <input type="text" className="form-input" placeholder="SA00 0000 0000 0000 0000 0000" value={settings.iban} onChange={e => setSettings(s => ({ ...s, iban: e.target.value }))} />
+                                                <label>{t.ibanNumber}</label>
+                                                <input type="text" className="form-input" placeholder={t.ibanPlaceholder} value={settings.iban} onChange={e => setSettings(s => ({ ...s, iban: e.target.value }))} />
                                             </div>
                                             <div className="form-group">
-                                                <label>Bank Name</label>
-                                                <input type="text" className="form-input" placeholder="e.g. Al Rajhi Bank" value={settings.bankName} onChange={e => setSettings(s => ({ ...s, bankName: e.target.value }))} />
+                                                <label>{t.bankName}</label>
+                                                <input type="text" className="form-input" placeholder={t.bankNamePlaceholder} value={settings.bankName} onChange={e => setSettings(s => ({ ...s, bankName: e.target.value }))} />
                                             </div>
                                             <div className="form-group">
-                                                <label>Account Holder Name</label>
-                                                <input type="text" className="form-input" placeholder="Name on account" value={settings.accountName} onChange={e => setSettings(s => ({ ...s, accountName: e.target.value }))} />
+                                                <label>{t.accountName}</label>
+                                                <input type="text" className="form-input" placeholder={t.accountNamePlaceholder} value={settings.accountName} onChange={e => setSettings(s => ({ ...s, accountName: e.target.value }))} />
                                             </div>
                                         </div>
                                     </div>
@@ -1072,27 +1199,27 @@ export default function DashboardPage() {
 
                                 {/* Notification Preferences */}
                                 <div className="settings-card">
-                                    <h3 className="settings-card-title"><i className="fa-solid fa-bell"></i> Notification Preferences</h3>
+                                    <h3 className="settings-card-title"><i className="fa-solid fa-bell"></i> {t.notifications}</h3>
                                     <div className="settings-toggles">
                                         <label className="toggle-label">
                                             <input type="checkbox" checked={settings.notifEmail} onChange={e => setSettings(s => ({ ...s, notifEmail: e.target.checked }))} />
                                             <span className="toggle-slider"></span>
                                             <span className="toggle-text">
-                                                <strong>Email Notifications</strong><small>Receive updates and alerts via email</small>
+                                                <strong>{t.emailNotifications}</strong><small>{t.emailNotifications}</small>
                                             </span>
                                         </label>
                                         <label className="toggle-label">
                                             <input type="checkbox" checked={settings.notifSms} onChange={e => setSettings(s => ({ ...s, notifSms: e.target.checked }))} />
                                             <span className="toggle-slider"></span>
                                             <span className="toggle-text">
-                                                <strong>SMS Notifications</strong><small>Receive text messages for bookings and alerts</small>
+                                                <strong>{t.smsNotifications}</strong><small>{t.receiveSmsUpdates}</small>
                                             </span>
                                         </label>
                                         <label className="toggle-label">
                                             <input type="checkbox" checked={settings.notifPush} onChange={e => setSettings(s => ({ ...s, notifPush: e.target.checked }))} />
                                             <span className="toggle-slider"></span>
                                             <span className="toggle-text">
-                                                <strong>Push Notifications</strong><small>Get in-app alerts and reminders</small>
+                                                <strong>{t.pushNotifications}</strong><small>{t.getInAppAlerts}</small>
                                             </span>
                                         </label>
                                     </div>
@@ -1100,14 +1227,14 @@ export default function DashboardPage() {
 
                                 {/* Communication Method */}
                                 <div className="settings-card">
-                                    <h3 className="settings-card-title"><i className="fa-solid fa-comment-dots"></i> Preferred Communication Method</h3>
+                                    <h3 className="settings-card-title"><i className="fa-solid fa-comment-dots"></i> {t.preferredCommunicationMethod}</h3>
                                     <div className="settings-comm-options">
                                         {['Email', 'Phone', 'SMS', 'InApp'].map(method => (
                                             <label className="comm-option" key={method}>
                                                 <input type="radio" name="commMethod" value={method} checked={settings.commMethod === method} onChange={() => setSettings(s => ({ ...s, commMethod: method }))} />
                                                 <span className="comm-option-inner">
                                                     <i className={`fa-solid ${method === 'Email' ? 'fa-envelope' : method === 'Phone' ? 'fa-phone' : method === 'SMS' ? 'fa-message' : 'fa-mobile-screen'}`}></i>
-                                                    {method === 'InApp' ? 'In-App' : method}
+                                                    {t.communicationMethods[method as keyof typeof t.communicationMethods]}
                                                 </span>
                                             </label>
                                         ))}
@@ -1116,7 +1243,7 @@ export default function DashboardPage() {
 
                                 {/* Language Preference */}
                                 <div className="settings-card">
-                                    <h3 className="settings-card-title"><i className="fa-solid fa-globe"></i> Language Preference</h3>
+                                    <h3 className="settings-card-title"><i className="fa-solid fa-globe"></i> {t.languagePreference}</h3>
                                     <div className="settings-lang-options">
                                         <label className="comm-option">
                                             <input type="radio" name="langPref" value="ar" checked={settings.langPref === 'ar'} onChange={() => setSettings(s => ({ ...s, langPref: 'ar' }))} />
@@ -1132,31 +1259,62 @@ export default function DashboardPage() {
                                 {/* Preferred Locations */}
                                 {!isProvider && (
                                     <div className="settings-card">
-                                        <h3 className="settings-card-title"><i className="fa-solid fa-location-dot"></i> Preferred Locations</h3>
-                                        <p className="settings-hint">Select the Jeddah neighborhoods where you'd like to find storage.</p>
+
+                                        <h3 className="settings-card-title">
+                                            <i className="fa-solid fa-location-dot"></i> {t.preferredLocations}
+                                        </h3>
+
+                                        <p className="settings-hint">
+                                            {t.selectNeighborhoodsHint}
+                                        </p>
+
                                         <div className="preferred-locations-grid">
-                                            {['Al-Salama', 'Al-Rawdah', 'Al-Nahda', 'Al-Andalus', 'Al-Hamra', 'Al-Rehab', 'Al-Faisaliyah', 'Al-Naeem', 'Al-Basateen', 'Al-Shati', 'Al-Safa', 'Al-Aziziyah', 'Al-Baghdadiyah', 'Al-Balad'].map(loc => (
+                                            {[
+                                                'Al-Salama',
+                                                'Al-Rawdah',
+                                                'Al-Nahda',
+                                                'Al-Andalus',
+                                                'Al-Hamra',
+                                                'Al-Rehab',
+                                                'Al-Faisaliyah',
+                                                'Al-Naeem',
+                                                'Al-Basateen',
+                                                'Al-Shati',
+                                                'Al-Safa',
+                                                'Al-Aziziyah',
+                                                'Al-Baghdadiyah',
+                                                'Al-Balad'
+                                            ].map(loc => (
                                                 <label className="location-checkbox" key={loc}>
-                                                    <input type="checkbox" checked={settings.prefLocs.includes(loc)} onChange={(e) => {
-                                                        const checked = e.target.checked;
-                                                        setSettings(s => ({
-                                                            ...s,
-                                                            prefLocs: checked ? [...s.prefLocs, loc] : s.prefLocs.filter(l => l !== loc)
-                                                        }));
-                                                    }} /> {loc}
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={settings.prefLocs.includes(loc)}
+                                                        onChange={(e) => {
+                                                            const checked = e.target.checked;
+
+                                                            setSettings(s => ({
+                                                                ...s,
+                                                                prefLocs: checked
+                                                                    ? [...s.prefLocs, loc]
+                                                                    : s.prefLocs.filter(l => l !== loc)
+                                                            }));
+                                                        }}
+                                                    />
+
+                                                    {t.locations[loc as keyof typeof t.locations]}
                                                 </label>
                                             ))}
                                         </div>
+
                                     </div>
                                 )}
 
                                 <div className="profile-actions">
                                     <button type="submit" className="primary-btn" disabled={settingsSaving}>
-                                        {settingsSaving ? 'Saving...' : 'Save Settings'}
-                                    </button>
+                                        {settingsSaving ? t.saving : t.saveSettings}                                    </button>
                                     {settingsSavedMsg && (
                                         <span className="save-msg" style={{ marginLeft: '1rem', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                                            <i className="fa-solid fa-check-circle"></i> Settings saved!
+                                            <i className="fa-solid fa-check-circle"></i> {t.settingsSaved}
                                         </span>
                                     )}
                                 </div>
@@ -1172,7 +1330,7 @@ export default function DashboardPage() {
                 <div className="review-modal-overlay" id="reviewModalOverlay">
                     <div className="review-modal">
                         <div className="review-modal-header">
-                            <h3>Review Your Experience</h3>
+                            <h3>{t.reviewYourExperience}</h3>
                             <button className="review-modal-close" onClick={() => setReviewModal(null)}>
                                 <i className="fa-solid fa-times"></i>
                             </button>
@@ -1183,7 +1341,7 @@ export default function DashboardPage() {
                                 <p>{reviewModal.SpaceType} · {formatDate(reviewModal.StartDate)} - {formatDate(reviewModal.EndDate)}</p>
                             </div>
                             <div className="review-form-group">
-                                <label className="review-label">Rating</label>
+                                <label className="review-label">{t.rating}</label>
                                 <div className="review-stars-container">
                                     {[1, 2, 3, 4, 5].map(v => (
                                         <span
@@ -1196,22 +1354,22 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             <div className="review-form-group">
-                                <label className="review-label">Your Review</label>
+                                <label className="review-label">{t.yourReview}</label>
                                 <textarea
                                     className="review-textarea"
                                     rows={4}
-                                    placeholder="Share your experience with this storage space..."
+                                    placeholder={t.shareExperiencePlaceholder}
                                     maxLength={500}
                                     value={reviewComment}
                                     onChange={e => setReviewComment(e.target.value)}
                                 />
-                                <p className="review-char-count">{reviewComment.length}/500 characters</p>
+                                <p className="review-char-count">{reviewComment.length}/500 {t.characters}</p>
                             </div>
                             {reviewError && <p className="review-error" style={{ display: 'block' }}>{reviewError}</p>}
                         </div>
                         <div className="review-modal-footer">
-                            <button className="btn btn-outline" onClick={() => setReviewModal(null)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={handleSubmitReview}>Submit Review</button>
+                            <button className="btn btn-outline" onClick={() => setReviewModal(null)}>{t.cancel}</button>
+                            <button className="btn btn-primary" onClick={handleSubmitReview}>{t.submitReview}</button>
                         </div>
                     </div>
                 </div>
@@ -1221,13 +1379,13 @@ export default function DashboardPage() {
                 <div className="container">
                     <div className="footer-content">
                         <div className="social-icons">
-                            <a href="#" aria-label="Facebook"><i className="fa-brands fa-facebook"></i></a>
-                            <a href="#" aria-label="LinkedIn"><i className="fa-brands fa-linkedin-in"></i></a>
-                            <a href="#" aria-label="X"><i className="fa-brands fa-x-twitter"></i></a>
-                            <a href="#" aria-label="Instagram"><i className="fa-brands fa-instagram"></i></a>
+                            <a href="#" aria-label={t.facebook}><i className="fa-brands fa-facebook"></i></a>
+                            <a href="#" aria-label={t.linkedin}><i className="fa-brands fa-linkedin-in"></i></a>
+                            <a href="#" aria-label={t.x}><i className="fa-brands fa-x-twitter"></i></a>
+                            <a href="#" aria-label={t.instagram}><i className="fa-brands fa-instagram"></i></a>
                         </div>
                         <div className="footer-logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="footer-logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="footer-logo-img" />
                         </div>
                     </div>
                 </div>

@@ -2,7 +2,24 @@
 import { useEffect, useState, use } from 'react';
 import dynamic from 'next/dynamic';
 import Loader from '@/components/Loader';
+import LanguageToggle from '@/app/components/LanguageToggle';
+import { translations, type Language } from '@/lib/translations';
 
+function getCurrentLang(): Language {
+    if (typeof document === 'undefined') return 'en';
+
+    const match = document.cookie.match(/(?:^|; )lang=([^;]+)/);
+    return match?.[1] === 'ar' ? 'ar' : 'en';
+}
+function usePageLanguage(): Language {
+    const [lang, setLang] = useState<Language>(() => getCurrentLang());
+
+    useEffect(() => {
+        setLang(getCurrentLang());
+    }, []);
+
+    return lang;
+}
 const LocationMap = dynamic(() => import('../../list-space/LocationMap'), {
     ssr: false,
     loading: () => <div style={{ height: '300px', background: '#f7fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px' }}><Loader /></div>
@@ -15,6 +32,8 @@ interface User {
 }
 
 export default function EditSpacePage({ params }: { params: Promise<{ id: string }> }) {
+    const lang = usePageLanguage();
+    const t = translations[lang];
     const { id } = use(params);
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState('');
@@ -69,29 +88,36 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
     const calculatedArea = length * width;
 
     useEffect(() => {
+        document.documentElement.lang = lang;
+        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    }, [lang]);
+
+    useEffect(() => {
         const storedUser = localStorage.getItem('siaaUser');
         const storedToken = localStorage.getItem('siaaToken');
+
         if (!storedUser || !storedToken) {
             window.location.href = '/login';
             return;
         }
+
         const u = JSON.parse(storedUser);
+
         if (u.userType !== 'provider') {
-            alert('Only providers can edit spaces');
+            alert(t.onlyProvidersEditSpaces);
             window.location.href = '/dashboard';
             return;
         }
+
         setUser(u);
         setToken(storedToken);
 
-        // Fetch existing space and pre-fill form
         fetch(`/api/spaces/${id}`)
             .then(res => res.json())
             .then(data => {
                 if (data.space) {
                     const s = data.space;
 
-                    // Reverse-map access type value
                     let accessType = '24-7';
                     if (s.AccessType === 'BusinessHours' || s.AccessType === 'business-hours') accessType = 'business-hours';
                     else if (s.AccessType === 'ByAppointment' || s.AccessType === 'by-appointment') accessType = 'by-appointment';
@@ -108,7 +134,6 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                         listingWidth: s.Width != null ? String(s.Width) : '',
                         listingHeight: s.Height != null ? String(s.Height) : '',
                         listingDescription: s.Description || '',
-
                         featTemperature: !!s.ClimateControlled,
                         featClimate: !!s.ClimateControlled,
                         featHumidity: false,
@@ -117,7 +142,6 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                         featCCTV: !!s.CctvMonitored,
                         featLighting: false,
                         prohibitedItems: s.Restrictions || '',
-
                         accessType,
                         availableFrom: s.AvailableFrom || '',
                         availableTo: s.AvailableTo || '',
@@ -125,17 +149,15 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                         pricePerWeek: s.PricePerWeek != null ? String(s.PricePerWeek) : '',
                         pricePerMonth: s.PricePerMonth != null ? String(s.PricePerMonth) : '',
                         accessNotes: s.AccessNotes || '',
-
                         listingStatus: (s.Status || 'active').toLowerCase(),
                     });
                 } else {
-                    setError('Space not found');
+                    setError(t.spaceNotFound);
                 }
             })
-            .catch(() => setError('Failed to load space'))
+            .catch(() => setError(t.failedToLoadSpace))
             .finally(() => setSpaceLoading(false));
-    }, [id]);
-
+    }, [id, t]);
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target as any;
         if (type === 'checkbox') {
@@ -154,17 +176,30 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
 
     const nextStep = () => {
         if (currentStep === 1) {
-            if (!formData.listingTitle || !formData.listingNeighborhood || !formData.listingAddress || !formData.latitude || !formData.longitude || !formData.listingType || !formData.listingLength || !formData.listingWidth || !formData.listingHeight || !formData.listingDescription) {
-                alert('Please fill out all required fields in Step 1.');
+            if (
+                !formData.listingTitle ||
+                !formData.listingNeighborhood ||
+                !formData.listingAddress ||
+                !formData.latitude ||
+                !formData.longitude ||
+                !formData.listingType ||
+                !formData.listingLength ||
+                !formData.listingWidth ||
+                !formData.listingHeight ||
+                !formData.listingDescription
+            ) {
+                alert(t.fillRequiredFieldsStep1);
                 return;
             }
         }
+
         if (currentStep === 3) {
             if (!formData.pricePerMonth) {
-                alert('Please provide a monthly price.');
+                alert(t.provideMonthlyPrice);
                 return;
             }
         }
+
         setCurrentStep(prev => prev + 1);
         window.scrollTo(0, 0);
     };
@@ -173,7 +208,6 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
         setCurrentStep(prev => prev - 1);
         window.scrollTo(0, 0);
     };
-
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError('');
@@ -226,10 +260,9 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
             const response = await res.json();
 
             if (!res.ok) {
-                setError(response.error || 'Failed to update space');
+                setError(response.error || t.failedToUpdateSpace);
                 return;
             }
-
             // Upload new photos if any were selected
             if (selectedPhotos && selectedPhotos.length > 0) {
                 const photoForm = new FormData();
@@ -242,15 +275,15 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                     body: photoForm,
                 });
                 if (!imgRes.ok) {
-                    setSuccess('Space updated, but photo upload failed. Try again from this page.');
+                    setSuccess(t.spaceUpdatedPhotoUploadFailed);
                     return;
                 }
                 setSelectedPhotos(null);
             }
 
-            setSuccess('Your space has been updated successfully! Photos saved.');
+            setSuccess(t.spaceUpdatedPhotosSaved);
         } catch {
-            setError('Network error. Please try again.');
+            setError(t.networkErrorTryAgain);
         } finally {
             setLoading(false);
         }
@@ -262,16 +295,21 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
     return (
         <>
             <header className="header">
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                    <LanguageToggle />
+                </div>
+
                 <div className="container">
                     <div className="header-content">
                         <nav className="nav">
-                            <a href="/dashboard">Dashboard</a>
-                            <a href="/#about">About</a>
-                            <a href="/#features">Features</a>
-                            <a href="/#how-it-works">How It Works</a>
+                            <a href="/dashboard">{t.dashboard}</a>
+                            <a href="#about">{t.about}</a>
+                            <a href="#features">{t.features}</a>
+                            <a href="#how-it-works">{t.howItWorks}</a>
                         </nav>
+
                         <div className="logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
                     </div>
                 </div>
@@ -281,24 +319,44 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                 <div className="container">
                     {success ? (
                         <div className="listing-confirmation" style={{ display: 'block' }}>
-                            <h3>Space updated successfully! ✅</h3>
-                            <p>Your changes have been saved. You can continue editing or return to your dashboard.</p>
+                            <h3>{t.spaceUpdatedSuccessfully} ✅</h3>
+                            <p>{t.changesSavedMessage}</p>
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-                                <a href="/dashboard" className="btn btn-dark" style={{ display: 'inline-block' }}>Go to Dashboard</a>
-                                <button className="btn btn-outline" onClick={() => setSuccess('')} style={{ display: 'inline-block' }}>Continue Editing</button>
+                                <a
+                                    href="/dashboard"
+                                    className="btn btn-dark"
+                                    style={{ display: 'inline-block' }}
+                                >
+                                    {t.goToDashboard}
+                                </a>
+                                <button
+                                    className="btn btn-outline"
+                                    onClick={() => setSuccess('')}
+                                    style={{ display: 'inline-block' }}
+                                >
+                                    {t.continueEditing}
+                                </button>
                             </div>
                         </div>
                     ) : (
                         <>
                             <div className="listing-header">
-                                <h1 className="listing-title">Edit Your Storage Space</h1>
+                                <h1 className="listing-title">{t.editStorageSpaceTitle}</h1>
                                 <p className="listing-subtitle">
-                                    Update your space details below. Navigate between steps to make changes and save when you're done.
+                                    {t.editStorageSpaceSubtitle}
                                 </p>
                             </div>
 
                             {error && (
-                                <div style={{ background: '#fee2e2', color: '#991b1b', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                                <div
+                                    style={{
+                                        background: '#fee2e2',
+                                        color: '#991b1b',
+                                        padding: '1rem',
+                                        borderRadius: '8px',
+                                        marginBottom: '1.5rem'
+                                    }}
+                                >
                                     ✗ {error}
                                 </div>
                             )}
@@ -306,21 +364,40 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                             <div className="listing-layout">
                                 <div className="steps-card">
                                     <div className="steps-row">
-                                        <div className={`step-pill ${currentStep === 1 ? 'is-active' : ''}`} onClick={() => goToStep(1)} style={{ cursor: 'pointer' }}>
+                                        <div
+                                            className={`step-pill ${currentStep === 1 ? 'is-active' : ''}`}
+                                            onClick={() => goToStep(1)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
                                             <span className="step-number">1</span>
-                                            <span className="step-label">Basic Details</span>
+                                            <span className="step-label">{t.stepBasicDetails}</span>
                                         </div>
-                                        <div className={`step-pill ${currentStep === 2 ? 'is-active' : ''}`} onClick={() => goToStep(2)} style={{ cursor: 'pointer' }}>
+
+                                        <div
+                                            className={`step-pill ${currentStep === 2 ? 'is-active' : ''}`}
+                                            onClick={() => goToStep(2)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
                                             <span className="step-number">2</span>
-                                            <span className="step-label">Environment &amp; Media</span>
+                                            <span className="step-label">{t.stepEnvironmentMedia}</span>
                                         </div>
-                                        <div className={`step-pill ${currentStep === 3 ? 'is-active' : ''}`} onClick={() => goToStep(3)} style={{ cursor: 'pointer' }}>
+
+                                        <div
+                                            className={`step-pill ${currentStep === 3 ? 'is-active' : ''}`}
+                                            onClick={() => goToStep(3)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
                                             <span className="step-number">3</span>
-                                            <span className="step-label">Access &amp; Pricing</span>
+                                            <span className="step-label">{t.stepAccessPricing}</span>
                                         </div>
-                                        <div className={`step-pill ${currentStep === 4 ? 'is-active' : ''}`} onClick={() => goToStep(4)} style={{ cursor: 'pointer' }}>
+
+                                        <div
+                                            className={`step-pill ${currentStep === 4 ? 'is-active' : ''}`}
+                                            onClick={() => goToStep(4)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
                                             <span className="step-number">4</span>
-                                            <span className="step-label">Review &amp; Save</span>
+                                            <span className="step-label">{t.stepReviewSave}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -331,104 +408,166 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                                         {/* STEP 1 */}
                                         {currentStep === 1 && (
                                             <div className="step-panel is-active">
-                                                <h2 className="step-title">Basic space details</h2>
-                                                <p className="step-description">Update the type, location, and dimensions of your space.</p>
+                                                <h2 className="step-title">{t.basicSpaceDetails}</h2>
+                                                <p className="step-description">{t.updateTypeLocationDimensions}</p>
 
                                                 <div className="step-row">
                                                     <div className="form-group">
-                                                        <label className="form-label">Listing title *</label>
-                                                        <input name="listingTitle" type="text" className="form-input" placeholder="e.g., Indoor storage room in Al-Salama" value={formData.listingTitle} onChange={handleInputChange} required />
+                                                        <label className="form-label">{t.listingTitle} *</label>
+                                                        <input
+                                                            name="listingTitle"
+                                                            type="text"
+                                                            className="form-input"
+                                                            placeholder={t.listingTitlePlaceholder}
+                                                            value={formData.listingTitle}
+                                                            onChange={handleInputChange}
+                                                            required
+                                                        />
                                                     </div>
 
                                                     <div className="form-group">
-                                                        <label className="form-label">Neighborhood (Jeddah) *</label>
-                                                        <select name="listingNeighborhood" className="form-input" value={formData.listingNeighborhood} onChange={handleInputChange} required>
-                                                            <option value="">Select neighborhood</option>
-                                                            <option value="al-salama">Al-Salama</option>
-                                                            <option value="al-rawdah">Al-Rawdah</option>
-                                                            <option value="al-nahda">Al-Nahda</option>
-                                                            <option value="al-andalus">Al-Andalus</option>
-                                                            <option value="al-hamra">Al-Hamra</option>
-                                                            <option value="al-rehab">Al-Rehab</option>
-                                                            <option value="al-faisaliyah">Al-Faisaliyah</option>
-                                                            <option value="al-naeem">Al-Naeem</option>
-                                                            <option value="al-basateen">Al-Basateen</option>
-                                                            <option value="al-shati">Al-Shati (Corniche)</option>
-                                                            <option value="al-safa">Al-Safa</option>
-                                                            <option value="al-aziziyah">Al-Aziziyah</option>
-                                                            <option value="al-baghdadiyah">Al-Baghdadiyah</option>
-                                                            <option value="al-balad">Al-Balad</option>
+                                                        <label className="form-label">{t.neighborhoodJeddah} *</label>
+                                                        <select
+                                                            name="listingNeighborhood"
+                                                            className="form-input"
+                                                            value={formData.listingNeighborhood}
+                                                            onChange={handleInputChange}
+                                                            required
+                                                        >
+                                                            <option value="">{t.selectNeighborhood}</option>
+
+                                                            <option value="al-salama">{t.neighborhoodAlSalama}</option>
+                                                            <option value="al-rawdah">{t.neighborhoodAlRawdah}</option>
+                                                            <option value="al-nahda">{t.neighborhoodAlNahda}</option>
+                                                            <option value="al-andalus">{t.neighborhoodAlAndalus}</option>
+                                                            <option value="al-hamra">{t.neighborhoodAlHamra}</option>
+                                                            <option value="al-rehab">{t.neighborhoodAlRehab}</option>
+                                                            <option value="al-faisaliyah">{t.neighborhoodAlFaisaliyah}</option>
+                                                            <option value="al-naeem">{t.neighborhoodAlNaeem}</option>
+                                                            <option value="al-basateen">{t.neighborhoodAlBasateen}</option>
+                                                            <option value="al-shati">{t.neighborhoodAlShati}</option>
+                                                            <option value="al-safa">{t.neighborhoodAlSafa}</option>
+                                                            <option value="al-aziziyah">{t.neighborhoodAlAziziyah}</option>
+                                                            <option value="al-baghdadiyah">{t.neighborhoodAlBaghdadiyah}</option>
+                                                            <option value="al-balad">{t.neighborhoodAlBalad}</option>
                                                         </select>
                                                     </div>
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <label className="form-label">Full address *</label>
-                                                    <input name="listingAddress" type="text" className="form-input" placeholder="Building, street, nearby landmark…" value={formData.listingAddress} onChange={handleInputChange} required />
+                                                    <label className="form-label">{t.fullAddress} *</label>
+                                                    <input
+                                                        name="listingAddress"
+                                                        type="text"
+                                                        className="form-input"
+                                                        placeholder={t.fullAddressPlaceholder}
+                                                        value={formData.listingAddress}
+                                                        onChange={handleInputChange}
+                                                        required
+                                                    />
                                                 </div>
 
                                                 <LocationMap
                                                     lat={parseFloat(formData.latitude) || 21.5433}
                                                     lng={parseFloat(formData.longitude) || 39.1728}
-                                                    onChange={(lat, lng) => setFormData(f => ({ ...f, latitude: String(lat), longitude: String(lng) }))}
+                                                    onChange={(lat, lng) =>
+                                                        setFormData(f => ({
+                                                            ...f,
+                                                            latitude: String(lat),
+                                                            longitude: String(lng)
+                                                        }))
+                                                    }
                                                 />
 
                                                 <div className="step-row">
                                                     <div className="form-group">
-                                                        <label className="form-label">Latitude *</label>
-                                                        <input name="latitude" type="number" step="0.000001" className="form-input" placeholder="e.g., 21.543321" value={formData.latitude} onChange={handleInputChange} required />
+                                                        <label className="form-label">{t.latitude} *</label>
+                                                        <input
+                                                            name="latitude"
+                                                            type="number"
+                                                            step="0.000001"
+                                                            className="form-input"
+                                                            placeholder={t.latitudePlaceholder}
+                                                            value={formData.latitude}
+                                                            onChange={handleInputChange}
+                                                            required
+                                                        />
                                                     </div>
+
                                                     <div className="form-group">
-                                                        <label className="form-label">Longitude *</label>
-                                                        <input name="longitude" type="number" step="0.000001" className="form-input" placeholder="e.g., 39.172123" value={formData.longitude} onChange={handleInputChange} required />
+                                                        <label className="form-label">{t.longitude} *</label>
+                                                        <input
+                                                            name="longitude"
+                                                            type="number"
+                                                            step="0.000001"
+                                                            className="form-input"
+                                                            placeholder={t.longitudePlaceholder}
+                                                            value={formData.longitude}
+                                                            onChange={handleInputChange}
+                                                            required
+                                                        />
                                                     </div>
                                                 </div>
 
                                                 <div className="step-row">
                                                     <div className="form-group">
-                                                        <label className="form-label">Space type *</label>
-                                                        <select name="listingType" className="form-input" value={formData.listingType} onChange={handleInputChange} required>
-                                                            <option value="">Choose type</option>
-                                                            <option value="room">Indoor room</option>
-                                                            <option value="garage">Garage / parking</option>
-                                                            <option value="warehouse">Warehouse corner</option>
-                                                            <option value="outdoor">Outdoor covered area</option>
-                                                            <option value="Basement">Basement</option>
+                                                        <label className="form-label">{t.spaceType} *</label>
+                                                        <select
+                                                            name="listingType"
+                                                            className="form-input"
+                                                            value={formData.listingType}
+                                                            onChange={handleInputChange}
+                                                            required
+                                                        >
+                                                            <option value="">{t.chooseType}</option>
+                                                            <option value="room">{t.spaceTypeRoom}</option>
+                                                            <option value="garage">{t.spaceTypeGarage}</option>
+                                                            <option value="warehouse">{t.spaceTypeWarehouse}</option>
+                                                            <option value="outdoor">{t.spaceTypeOutdoor}</option>
+                                                            <option value="Basement">{t.spaceTypeBasement}</option>
                                                         </select>
                                                     </div>
 
                                                     <div className="form-group">
-                                                        <label className="form-label">Approximate size (m²)</label>
-                                                        <input name="listingSize" type="number" min="1" className="form-input" placeholder="e.g., 6" value={formData.listingSize} onChange={handleInputChange} />
+                                                        <label className="form-label">{t.approximateSize}</label>
+                                                        <input
+                                                            name="listingSize"
+                                                            type="number"
+                                                            min="1"
+                                                            className="form-input"
+                                                            placeholder={t.approximateSizePlaceholder}
+                                                            value={formData.listingSize}
+                                                            onChange={handleInputChange}
+                                                        />
                                                     </div>
                                                 </div>
 
                                                 <div className="step-row four-grid">
                                                     <div className="form-group">
-                                                        <label className="form-label">Length (m) *</label>
-                                                        <input name="listingLength" type="number" min="1" className="form-input" placeholder="e.g. 3" value={formData.listingLength} onChange={handleInputChange} required />
+                                                        <label className="form-label">{t.lengthM} *</label>
+                                                        <input name="listingLength" type="number" min="1" className="form-input" placeholder={t.lengthPlaceholder} value={formData.listingLength} onChange={handleInputChange} required />
                                                     </div>
                                                     <div className="form-group">
-                                                        <label className="form-label">Width (m) *</label>
-                                                        <input name="listingWidth" type="number" min="1" className="form-input" placeholder="e.g. 2" value={formData.listingWidth} onChange={handleInputChange} required />
+                                                        <label className="form-label">{t.widthM} *</label>
+                                                        <input name="listingWidth" type="number" min="1" className="form-input" placeholder={t.widthPlaceholder} value={formData.listingWidth} onChange={handleInputChange} required />
                                                     </div>
                                                     <div className="form-group">
-                                                        <label className="form-label">Height (m) *</label>
-                                                        <input name="listingHeight" type="number" min="1" className="form-input" placeholder="e.g. 2.5" value={formData.listingHeight} onChange={handleInputChange} required />
+                                                        <label className="form-label">{t.heightM} *</label>
+                                                        <input name="listingHeight" type="number" min="1" className="form-input" placeholder={t.heightPlaceholder} value={formData.listingHeight} onChange={handleInputChange} required />
                                                     </div>
                                                     <div className="form-group">
-                                                        <label className="form-label">Area (m²) *</label>
-                                                        <input type="text" className="form-input" value={calculatedArea > 0 ? calculatedArea : ''} placeholder="auto-calculated" disabled required />
+                                                        <label className="form-label">{t.areaM2} *</label>
+                                                        <input type="text" className="form-input" value={calculatedArea > 0 ? calculatedArea : ''} placeholder={t.autoCalculated} disabled required />
                                                     </div>
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <label className="form-label">Description *</label>
-                                                    <textarea name="listingDescription" className="form-input" rows={3} placeholder="Describe what can be stored, building type, access, etc." value={formData.listingDescription} onChange={handleInputChange} required></textarea>
+                                                    <label className="form-label">{t.description} *</label>
+                                                    <textarea name="listingDescription" className="form-input" rows={3} placeholder={t.descriptionPlaceholder} value={formData.listingDescription} onChange={handleInputChange} required></textarea>
                                                 </div>
 
                                                 <div className="step-actions">
-                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>Next: Environment &amp; Media</button>
+                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>{t.nextEnvironmentMedia}</button>
                                                 </div>
                                             </div>
                                         )}
@@ -436,75 +575,97 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                                         {/* STEP 2 */}
                                         {currentStep === 2 && (
                                             <div className="step-panel is-active">
-                                                <h2 className="step-title">Environment &amp; media</h2>
-                                                <p className="step-description">Update environmental conditions and security features.</p>
+                                                <h2 className="step-title">{t.environmentMediaTitle}</h2>
+                                                <p className="step-description">{t.environmentMediaDescription}</p>
 
                                                 <div className="form-group">
-                                                    <span className="form-label">Environmental conditions (choose all that apply)</span>
+                                                    <span className="form-label">{t.environmentalConditions}</span>
                                                     <div className="chip-row">
                                                         <label className="chip-option">
                                                             <input type="checkbox" name="featTemperature" checked={formData.featTemperature} onChange={handleInputChange} />
-                                                            <span>Temperature-controlled</span>
+                                                            <span>{t.temperatureControlled}</span>
                                                         </label>
+
                                                         <label className="chip-option">
                                                             <input type="checkbox" name="featClimate" checked={formData.featClimate} onChange={handleInputChange} />
-                                                            <span>Climate-controlled</span>
+                                                            <span>{t.climateControlled}</span>
                                                         </label>
+
                                                         <label className="chip-option">
                                                             <input type="checkbox" name="featHumidity" checked={formData.featHumidity} onChange={handleInputChange} />
-                                                            <span>Humidity-controlled</span>
+                                                            <span>{t.humidityControlled}</span>
                                                         </label>
+
                                                         <label className="chip-option">
                                                             <input type="checkbox" name="featDry" checked={formData.featDry} onChange={handleInputChange} />
-                                                            <span>Dry storage</span>
+                                                            <span>{t.dryStorage}</span>
                                                         </label>
                                                     </div>
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <span className="form-label">Security &amp; convenience</span>
+                                                    <span className="form-label">{t.securityConvenience}</span>
                                                     <div className="chip-row">
                                                         <label className="chip-option">
                                                             <input type="checkbox" name="featSecureAccess" checked={formData.featSecureAccess} onChange={handleInputChange} />
-                                                            <span>Secure access (lock / gate)</span>
+                                                            <span>{t.secureAccess}</span>
                                                         </label>
+
                                                         <label className="chip-option">
                                                             <input type="checkbox" name="featCCTV" checked={formData.featCCTV} onChange={handleInputChange} />
-                                                            <span>CCTV</span>
+                                                            <span>{t.cctv}</span>
                                                         </label>
+
                                                         <label className="chip-option">
                                                             <input type="checkbox" name="featLighting" checked={formData.featLighting} onChange={handleInputChange} />
-                                                            <span>Good lighting</span>
+                                                            <span>{t.goodLighting}</span>
                                                         </label>
                                                     </div>
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <label className="form-label">Prohibited items (optional)</label>
-                                                    <textarea name="prohibitedItems" className="form-input" rows={2} placeholder="e.g., No flammable materials, no chemicals…" value={formData.prohibitedItems} onChange={handleInputChange}></textarea>
+                                                    <label className="form-label">{t.prohibitedItems}</label>
+                                                    <textarea
+                                                        name="prohibitedItems"
+                                                        className="form-input"
+                                                        rows={2}
+                                                        placeholder={t.prohibitedItemsPlaceholder}
+                                                        value={formData.prohibitedItems}
+                                                        onChange={handleInputChange}
+                                                    ></textarea>
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <label className="form-label">Upload new photos (optional)</label>
-                                                    <input name="listingPhotos" type="file" accept="image/*" multiple className="form-input" onChange={handleInputChange} />
+                                                    <label className="form-label">{t.uploadNewPhotos}</label>
+                                                    <input
+                                                        name="listingPhotos"
+                                                        type="file"
+                                                        accept="image/*"
+                                                        multiple
+                                                        className="form-input"
+                                                        onChange={handleInputChange}
+                                                        lang={lang}
+                                                    />
+
                                                     {selectedPhotos && selectedPhotos.length > 0 ? (
                                                         <p className="step-note" style={{ color: '#38a169', fontWeight: 600 }}>
-                                                            ✓ {selectedPhotos.length} photo{selectedPhotos.length > 1 ? 's' : ''} ready to upload — click &quot;Save Changes&quot; to save them.
+                                                            ✓ {selectedPhotos.length} {selectedPhotos.length > 1 ? t.photosReadyPlural : t.photoReadySingular}
                                                         </p>
                                                     ) : (
-                                                        <p className="step-note">Leave empty to keep existing photos. Upload new ones to add to this space.</p>
+                                                        <p className="step-note">
+                                                            {t.keepExistingPhotosNote}
+                                                        </p>
                                                     )}
                                                 </div>
-
                                                 <div className="form-group">
-                                                    <label className="form-label">Optional video tour</label>
+                                                    <label className="form-label">{t.optionalVideoTour}</label>
                                                     <input name="listingVideo" type="file" accept="video/*" className="form-input" />
-                                                    <p className="step-note">Short video showing how to access and use the space (optional).</p>
+                                                    <p className="step-note">{t.optionalVideoTourNote}</p>
                                                 </div>
 
                                                 <div className="step-actions step-actions--split">
-                                                    <button type="button" className="btn btn-outline prev-btn" onClick={prevStep}>Back</button>
-                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>Next: Access &amp; Pricing</button>
+                                                    <button type="button" className="btn btn-outline prev-btn" onClick={prevStep}>{t.back}</button>
+                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>{t.nextAccessPricing}</button>
                                                 </div>
                                             </div>
                                         )}
@@ -512,23 +673,23 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                                         {/* STEP 3 */}
                                         {currentStep === 3 && (
                                             <div className="step-panel is-active">
-                                                <h2 className="step-title">Access &amp; pricing</h2>
-                                                <p className="step-description">Update how renters access the space and adjust your price.</p>
+                                                <h2 className="step-title">{t.accessPricingTitle}</h2>
+                                                <p className="step-description">{t.accessPricingDescription}</p>
 
                                                 <div className="form-group">
-                                                    <span className="form-label">Access method *</span>
+                                                    <span className="form-label">{t.accessMethod} *</span>
                                                     <div className="chip-row">
                                                         <label className="chip-option">
                                                             <input type="radio" name="accessType" value="24-7" checked={formData.accessType === '24-7'} onChange={handleInputChange} required />
-                                                            <span>24/7 access</span>
+                                                            <span>{t.access247}</span>
                                                         </label>
                                                         <label className="chip-option">
                                                             <input type="radio" name="accessType" value="business-hours" checked={formData.accessType === 'business-hours'} onChange={handleInputChange} />
-                                                            <span>Business hours</span>
+                                                            <span>{t.businessHours}</span>
                                                         </label>
                                                         <label className="chip-option">
                                                             <input type="radio" name="accessType" value="by-appointment" checked={formData.accessType === 'by-appointment'} onChange={handleInputChange} />
-                                                            <span>By appointment</span>
+                                                            <span>{t.byAppointment}</span>
                                                         </label>
                                                     </div>
                                                 </div>
@@ -536,11 +697,11 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                                                 {formData.accessType !== '24-7' && (
                                                     <div className="step-row availability-row">
                                                         <div className="form-group">
-                                                            <label className="form-label">Available from</label>
+                                                            <label className="form-label">{t.availableFrom}</label>
                                                             <input name="availableFrom" type="time" className="form-input" value={formData.availableFrom} onChange={handleInputChange} />
                                                         </div>
                                                         <div className="form-group">
-                                                            <label className="form-label">Available until</label>
+                                                            <label className="form-label">{t.availableUntil}</label>
                                                             <input name="availableTo" type="time" className="form-input" value={formData.availableTo} onChange={handleInputChange} />
                                                         </div>
                                                     </div>
@@ -548,64 +709,112 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
 
                                                 <div className="step-row three-grid">
                                                     <div className="form-group">
-                                                        <label className="form-label">Price per Day (SAR)</label>
-                                                        <input name="pricePerDay" type="number" min="0" className="form-input" placeholder="Optional" value={formData.pricePerDay} onChange={handleInputChange} />
+                                                        <label className="form-label">{t.pricePerDay}</label>
+                                                        <input name="pricePerDay" type="number" min="0" className="form-input" placeholder={t.optional} value={formData.pricePerDay} onChange={handleInputChange} />
                                                     </div>
                                                     <div className="form-group">
-                                                        <label className="form-label">Price per Week (SAR)</label>
-                                                        <input name="pricePerWeek" type="number" min="0" className="form-input" placeholder="Optional" value={formData.pricePerWeek} onChange={handleInputChange} />
+                                                        <label className="form-label">{t.pricePerWeek}</label>
+                                                        <input name="pricePerWeek" type="number" min="0" className="form-input" placeholder={t.optional} value={formData.pricePerWeek} onChange={handleInputChange} />
                                                     </div>
                                                     <div className="form-group">
-                                                        <label className="form-label">Price per Month (SAR) *</label>
-                                                        <input name="pricePerMonth" type="number" min="1" className="form-input" placeholder="Required" value={formData.pricePerMonth} onChange={handleInputChange} required />
+                                                        <label className="form-label">{t.pricePerMonth} *</label>
+                                                        <input name="pricePerMonth" type="number" min="1" className="form-input" placeholder={t.required} value={formData.pricePerMonth} onChange={handleInputChange} required />
                                                     </div>
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <label className="form-label">Entry requirements / access notes</label>
-                                                    <textarea name="accessNotes" className="form-input" rows={2} placeholder="e.g., Access via security gate, ID required with guard, parking instructions…" value={formData.accessNotes} onChange={handleInputChange}></textarea>
+                                                    <label className="form-label">{t.accessNotes}</label>
+                                                    <textarea name="accessNotes" className="form-input" rows={2} placeholder={t.accessNotesPlaceholder} value={formData.accessNotes} onChange={handleInputChange}></textarea>
                                                 </div>
 
                                                 <div className="step-actions step-actions--split">
-                                                    <button type="button" className="btn btn-outline prev-btn" onClick={prevStep}>Back</button>
-                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>Next: Review &amp; Save</button>
+                                                    <button type="button" className="btn btn-outline prev-btn" onClick={prevStep}>{t.back}</button>
+                                                    <button type="button" className="btn btn-dark next-btn" onClick={nextStep}>{t.nextReviewSave}</button>
                                                 </div>
                                             </div>
                                         )}
-
                                         {/* STEP 4 */}
                                         {currentStep === 4 && (
                                             <div className="step-panel is-active">
-                                                <h2 className="step-title">Review &amp; save</h2>
-                                                <p className="step-description">Check your updated information before saving.</p>
+                                                <h2 className="step-title">{t.reviewSaveTitle}</h2>
+                                                <p className="step-description">{t.reviewSaveDescription}</p>
 
                                                 <div className="summary-box">
-                                                    <h3>{formData.listingTitle || 'Untitled Listing'}</h3>
-                                                    <p><strong>Location:</strong> {formData.listingAddress}, {formData.listingNeighborhood}</p>
-                                                    <p><strong>Type:</strong> {formData.listingType} ({calculatedArea} m²)</p>
-                                                    <p><strong>Price:</strong> {formData.pricePerMonth} SAR/month</p>
-                                                    <p><strong>Access:</strong> {formData.accessType}</p>
+                                                    <h3>{formData.listingTitle || t.untitledListing}</h3>
+
+                                                    <p>
+                                                        <strong>{t.locationLabel}</strong>
+                                                        {formData.listingAddress}, {formData.listingNeighborhood}
+                                                    </p>
+
+                                                    <p>
+                                                        <strong>{t.typeLabel}</strong>
+                                                        {formData.listingType} ({calculatedArea} m²)
+                                                    </p>
+
+                                                    <p>
+                                                        <strong>{t.priceLabel}</strong>
+                                                        {formData.pricePerMonth} {t.sarPerMonth}
+                                                    </p>
+
+                                                    <p>
+                                                        <strong>{t.accessLabel}</strong>
+                                                        {formData.accessType}
+                                                    </p>
+
                                                     <br />
-                                                    <p className="step-note">Click "Save Changes" to apply your updates.</p>
+
+                                                    <p className="step-note">
+                                                        {t.clickSaveChangesNote}
+                                                    </p>
                                                 </div>
 
                                                 <div className="form-group">
-                                                    <span className="form-label">Listing status *</span>
+                                                    <span className="form-label">{t.listingStatus} *</span>
+
                                                     <div className="chip-row">
                                                         <label className="chip-option">
-                                                            <input type="radio" name="listingStatus" value="active" checked={formData.listingStatus === 'active'} onChange={handleInputChange} required />
-                                                            <span>Active (visible to renters)</span>
+                                                            <input
+                                                                type="radio"
+                                                                name="listingStatus"
+                                                                value="active"
+                                                                checked={formData.listingStatus === 'active'}
+                                                                onChange={handleInputChange}
+                                                                required
+                                                            />
+                                                            <span>{t.activeVisible}</span>
                                                         </label>
+
                                                         <label className="chip-option">
-                                                            <input type="radio" name="listingStatus" value="inactive" checked={formData.listingStatus === 'inactive'} onChange={handleInputChange} />
-                                                            <span>Inactive (not visible)</span>
+                                                            <input
+                                                                type="radio"
+                                                                name="listingStatus"
+                                                                value="inactive"
+                                                                checked={formData.listingStatus === 'inactive'}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                            <span>{t.inactiveNotVisible}</span>
                                                         </label>
                                                     </div>
                                                 </div>
 
                                                 <div className="step-actions step-actions--split">
-                                                    <button type="button" className="btn btn-outline prev-btn" onClick={prevStep} disabled={loading}>Back</button>
-                                                    <button type="submit" className="btn btn-dark" disabled={loading}>{loading ? 'Saving...' : 'Save Changes'}</button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-outline prev-btn"
+                                                        onClick={prevStep}
+                                                        disabled={loading}
+                                                    >
+                                                        {t.back}
+                                                    </button>
+
+                                                    <button
+                                                        type="submit"
+                                                        className="btn btn-dark"
+                                                        disabled={loading}
+                                                    >
+                                                        {loading ? t.saving : t.saveChanges}
+                                                    </button>
                                                 </div>
                                             </div>
                                         )}
@@ -622,13 +831,13 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                 <div className="container">
                     <div className="footer-content">
                         <div className="social-icons">
-                            <a href="#" aria-label="Facebook"><i className="fa-brands fa-facebook"></i></a>
-                            <a href="#" aria-label="LinkedIn"><i className="fa-brands fa-linkedin-in"></i></a>
-                            <a href="#" aria-label="X"><i className="fa-brands fa-x-twitter"></i></a>
-                            <a href="#" aria-label="Instagram"><i className="fa-brands fa-instagram"></i></a>
+                            <a href="#" aria-label={t.facebook}><i className="fa-brands fa-facebook"></i></a>
+                            <a href="#" aria-label={t.linkedin}><i className="fa-brands fa-linkedin-in"></i></a>
+                            <a href="#" aria-label={t.x}><i className="fa-brands fa-x-twitter"></i></a>
+                            <a href="#" aria-label={t.instagram}><i className="fa-brands fa-instagram"></i></a>
                         </div>
                         <div className="footer-logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="footer-logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="footer-logo-img" />
                         </div>
                     </div>
                 </div>
