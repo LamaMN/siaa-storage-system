@@ -1,7 +1,24 @@
 'use client';
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
+import LanguageToggle from '@/app/components/LanguageToggle';
+import { translations, type Language } from '@/lib/translations';
+
+function getCurrentLang(): Language {
+    if (typeof document === 'undefined') return 'en';
+    const match = document.cookie.match(/(?:^|; )lang=([^;]+)/);
+    return match?.[1] === 'ar' ? 'ar' : 'en';
+}
 
 export default function LoginPage() {
+
+    const [lang, setLang] = useState<Language>(() => getCurrentLang());
+    const t = translations[lang];
+
+    useEffect(() => {
+        document.documentElement.lang = lang;
+        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    }, [lang]);
+
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -25,23 +42,22 @@ export default function LoginPage() {
             const data = await res.json();
 
             if (!res.ok) {
-                setError(data.error || 'Login failed');
+                setError(data.error || t.loginFailed);
                 return;
             }
 
-            // Store JWT and user info in localStorage for existing JS compatibility
             localStorage.setItem('siaaToken', data.token);
             localStorage.setItem('siaaUser', JSON.stringify(data.user));
             localStorage.setItem('siaaIsFirstLogin', data.isFirstLogin ? 'true' : 'false');
 
-            // Redirect admin to admin dashboard, others to user dashboard
             if (data.user.userType === 'admin') {
                 window.location.href = '/admin';
             } else {
                 window.location.href = '/dashboard';
             }
+
         } catch {
-            setError('Network error. Please try again.');
+            setError(t.networkError);
         } finally {
             setLoading(false);
         }
@@ -50,39 +66,60 @@ export default function LoginPage() {
     return (
         <>
             <header className="header">
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                    <LanguageToggle />
+                </div>
+
                 <div className="container">
                     <div className="header-content">
+
                         <nav className="nav">
-                            <a href="/#about">About</a>
-                            <a href="/#features">Features</a>
-                            <a href="/#how-it-works">How It Works</a>
+                            <a href="/#about">{t.about}</a>
+                            <a href="/#features">{t.features}</a>
+                            <a href="/#how-it-works">{t.howItWorks}</a>
                         </nav>
+
                         <div className="logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
+
                     </div>
                 </div>
             </header>
 
             <section className="auth-section">
+
                 <div className="auth-visual">
                     <div className="auth-visual-content">
-                        <h1 className="auth-visual-title">Welcome back.</h1>
+
+                        <h1 className="auth-visual-title">
+                            {t.welcomeBack}
+                        </h1>
+
                         <p className="auth-visual-text">
-                            Manage your bookings, update your spaces, and keep your storage journey on track.
+                            {t.loginDescription}
                         </p>
+
                         <ul className="auth-visual-bullets">
-                            <li>View and manage active storage</li>
-                            <li>Edit or pause your listings anytime</li>
-                            <li>Secure, fast access to your account</li>
+                            <li>{t.manageStorage}</li>
+                            <li>{t.editListings}</li>
+                            <li>{t.secureAccess}</li>
                         </ul>
+
                     </div>
                 </div>
 
                 <div className="auth-wrapper">
                     <div className="auth-card">
-                        <h2 className="auth-title">Sign in</h2>
-                        <p className="auth-subtitle">Enter your details to continue.</p>
+
+                        <h2 className="auth-title">
+                            {t.signIn}
+                        </h2>
+
+                        <p className="auth-subtitle">
+                            {t.enterDetails}
+                        </p>
 
                         {error && (
                             <div className="alert alert-error" style={{ marginBottom: '1rem', color: 'red' }}>
@@ -91,41 +128,66 @@ export default function LoginPage() {
                         )}
 
                         <form className="auth-form-login" onSubmit={handleSubmit}>
+
                             <div className="form-group">
-                                <label htmlFor="loginEmail" className="form-label">Email</label>
+                                <label htmlFor="loginEmail" className="form-label">
+                                    {t.email}
+                                </label>
+
                                 <input
-                                    type="email" id="loginEmail" name="email"
-                                    className="form-input" placeholder="name@example.com" required
+                                    type="email"
+                                    id="loginEmail"
+                                    name="email"
+                                    className="form-input"
+                                    placeholder={t.emailPlaceholder}
+                                    required
                                 />
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="loginPassword" className="form-label">Password</label>
+                                <label htmlFor="loginPassword" className="form-label">
+                                    {t.password}
+                                </label>
+
                                 <div style={{ position: 'relative' }}>
+
                                     <input
                                         type={showPassword ? 'text' : 'password'}
                                         id="loginPassword"
                                         name="password"
                                         className="form-input"
-                                        placeholder="Enter your password"
+                                        placeholder={t.passwordPlaceholder}
                                         required
                                         style={{ paddingRight: '40px', width: '100%', boxSizing: 'border-box' }}
                                     />
+
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(v => !v)}
-                                        aria-label="Toggle password visibility"
-                                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0', padding: 0, fontSize: '14px' }}
+                                        aria-label={t.togglePasswordVisibility}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '12px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            color: '#a0aec0',
+                                            padding: 0,
+                                            fontSize: '14px'
+                                        }}
                                     >
                                         <i className={`fa-regular ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                     </button>
+
                                 </div>
                             </div>
 
-                            {/* Removed Account Type Select */}
-
                             <div className="form-meta">
-                                <a href="/forgot-password" className="form-link">Forgot your password?</a>
+                                <a href="/forgot-password" className="form-link">
+                                    {t.forgotPassword}
+                                </a>
                             </div>
 
                             <button
@@ -133,30 +195,37 @@ export default function LoginPage() {
                                 className="btn btn-dark btn-large auth-submit"
                                 disabled={loading}
                             >
-                                {loading ? 'Signing in...' : 'Log in'}
+                                {loading ? t.signingIn : t.logIn}
                             </button>
 
                             <p className="auth-switch">
-                                Don&apos;t have an account?{' '}
-                                <a href="/register">Create one now</a>
+                                {t.noAccount}{' '}
+                                <a href="/register">
+                                    {t.createAccount}
+                                </a>
                             </p>
+
                         </form>
                     </div>
                 </div>
+
             </section>
 
             <footer className="footer">
                 <div className="container">
                     <div className="footer-content">
+
                         <div className="social-icons">
-                            <a href="#" aria-label="Facebook"><i className="fa-brands fa-facebook"></i></a>
-                            <a href="#" aria-label="LinkedIn"><i className="fa-brands fa-linkedin-in"></i></a>
-                            <a href="#" aria-label="X"><i className="fa-brands fa-x-twitter"></i></a>
-                            <a href="#" aria-label="Instagram"><i className="fa-brands fa-instagram"></i></a>
+                            <a href="#" aria-label={t.facebook}><i className="fa-brands fa-facebook"></i></a>
+                            <a href="#" aria-label={t.linkedin}><i className="fa-brands fa-linkedin-in"></i></a>
+                            <a href="#" aria-label={t.x}><i className="fa-brands fa-x-twitter"></i></a>
+                            <a href="#" aria-label={t.instagram}><i className="fa-brands fa-instagram"></i></a>
                         </div>
+
                         <div className="footer-logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="footer-logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="footer-logo-img" />
                         </div>
+
                     </div>
                 </div>
             </footer>

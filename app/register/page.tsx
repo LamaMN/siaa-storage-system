@@ -1,30 +1,47 @@
 'use client';
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
+import LanguageToggle from '@/app/components/LanguageToggle';
+import { translations, type Language } from '@/lib/translations';
 
-function friendlyError(raw: string): string {
+function getCurrentLang(): Language {
+    if (typeof document === 'undefined') return 'en';
+
+    const match = document.cookie.match(/(?:^|; )lang=([^;]+)/);
+    return match?.[1] === 'ar' ? 'ar' : 'en';
+}
+
+function friendlyError(raw: string, t: any): string {
     const r = raw.toLowerCase();
     if (r.includes('email already exists') || r.includes('duplicate') && r.includes('email'))
-        return 'An account with this email address already exists. Try logging in instead.';
+        return t.emailAlreadyExists;
     if (r.includes('national') && (r.includes('already') || r.includes('duplicate') || r.includes('unique')))
-        return 'This National ID is already registered to another account.';
+        return t.nationalIdAlreadyRegistered;
     if (r.includes('18') || r.includes('age') || r.includes('years old'))
-        return 'You must be at least 18 years old to register on Si\'aa.';
+        return t.mustBeAtLeast18;
     if (r.includes('password must be at least'))
-        return 'Your password must be at least 8 characters long.';
+        return t.passwordMinLength;
     if (r.includes('valid email'))
-        return 'Please enter a valid email address (e.g. name@example.com).';
+        return t.validEmailError;
     if (r.includes('national id must be 10'))
-        return 'National ID must be exactly 10 digits and start with 1 or 2.';
+        return t.nationalIdFormatError;
     if (r.includes('phone') || r.includes('phoneNumber'))
-        return 'Please enter a valid Saudi phone number (at least 9 digits).';
+        return t.validSaudiPhoneError;
     if (r.includes('passwords do not match'))
-        return 'The passwords you entered don\'t match. Please try again.';
+        return t.passwordsDoNotMatch;
     if (r.includes('network'))
-        return 'Connection failed. Please check your internet and try again.';
+        return t.connectionFailed;
     return raw;
 }
 
 export default function RegisterPage() {
+    const [lang, setLang] = useState<Language>(() => getCurrentLang());
+    const t = translations[lang];
+
+    useEffect(() => {
+        document.documentElement.lang = lang;
+        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    }, [lang]);
+
     const [userType, setUserType] = useState<'seeker' | 'provider'>('seeker');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -53,7 +70,7 @@ export default function RegisterPage() {
         }
 
         if (data.password !== data.confirmPassword) {
-            setError(friendlyError('Passwords do not match'));
+            setError(friendlyError('Passwords do not match', t));
             setLoading(false);
             return;
         }
@@ -68,7 +85,7 @@ export default function RegisterPage() {
             const response = await res.json();
 
             if (!res.ok) {
-                setError(friendlyError(response.error || 'Registration failed'));
+                setError(friendlyError(response.error || 'Registration failed', t));
                 return;
             }
 
@@ -78,7 +95,7 @@ export default function RegisterPage() {
 
             window.location.href = '/dashboard';
         } catch {
-            setError(friendlyError('Network error. Please try again.'));
+            setError(friendlyError('Network error. Please try again.', t));
         } finally {
             setLoading(false);
         }
@@ -101,15 +118,19 @@ export default function RegisterPage() {
     return (
         <>
             <header className="header">
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                    <LanguageToggle />
+                </div>
+
                 <div className="container">
                     <div className="header-content">
                         <nav className="nav">
-                            <a href="/#about">About</a>
-                            <a href="/#features">Features</a>
-                            <a href="/#how-it-works">How It Works</a>
+                            <a href="/#about">{t.about}</a>
+                            <a href="/#features">{t.features}</a>
+                            <a href="/#how-it-works">{t.howItWorks}</a>
                         </nav>
                         <div className="logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
                     </div>
                 </div>
@@ -118,40 +139,41 @@ export default function RegisterPage() {
             <section className="auth-section">
                 <div className="auth-visual">
                     <div className="auth-visual-content">
-                        <h1 className="auth-visual-title">Store smarter.<br />Earn from your space.</h1>
+                        <h1 className="auth-visual-title">
+                            {t.storeSmarter}<br />{t.earnFromYourSpace}
+                        </h1>
                         <p className="auth-visual-text">
-                            Book nearby storage in minutes or list your extra space and start earning with a trusted community.
+                            {t.registerHeroText}
                         </p>
                         <ul className="auth-visual-bullets">
-                            <li>Flexible daily, weekly, and monthly plans</li>
-                            <li>Verified users &amp; secure bookings</li>
-                            <li>Smart matching based on your needs</li>
+                            <li>{t.flexiblePlans}</li>
+                            <li>{t.verifiedSecureBookings}</li>
+                            <li>{t.smartMatchingNeeds}</li>
                         </ul>
                     </div>
                 </div>
 
                 <div className="auth-wrapper">
                     <div className="auth-card">
-                        {/* Type toggle */}
                         <div className="auth-toggle-group">
                             <button
                                 type="button"
                                 className={`auth-toggle-btn ${userType === 'seeker' ? 'active' : ''}`}
                                 onClick={() => setUserType('seeker')}
                             >
-                                Find Storage
+                                {t.findStorage}
                             </button>
                             <button
                                 type="button"
                                 className={`auth-toggle-btn ${userType === 'provider' ? 'active' : ''}`}
                                 onClick={() => setUserType('provider')}
                             >
-                                List My Space
+                                {t.listMySpace}
                             </button>
                         </div>
 
-                        <h2 className="auth-title">Create an account</h2>
-                        <p className="auth-subtitle">Fill in your details to get started with Si&apos;aa.</p>
+                        <h2 className="auth-title">{t.createAccount}</h2>
+                        <p className="auth-subtitle">{t.fillDetailsSiaa}</p>
 
                         {error && (
                             <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
@@ -162,22 +184,22 @@ export default function RegisterPage() {
 
                         <form className="auth-form" onSubmit={handleSubmit} noValidate>
                             <div className="form-group">
-                                <label htmlFor="firstName" className="form-label">First Name</label>
-                                <input type="text" id="firstName" name="firstName" className="form-input" placeholder="First name" required />
+                                <label htmlFor="firstName" className="form-label">{t.firstName}</label>
+                                <input type="text" id="firstName" name="firstName" className="form-input" placeholder={t.firstNamePlaceholder} required />
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="lastName" className="form-label">Last Name</label>
-                                <input type="text" id="lastName" name="lastName" className="form-input" placeholder="Last name" required />
+                                <label htmlFor="lastName" className="form-label">{t.lastName}</label>
+                                <input type="text" id="lastName" name="lastName" className="form-input" placeholder={t.lastNamePlaceholder} required />
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="email" className="form-label">Email</label>
-                                <input type="email" id="email" name="email" className="form-input" placeholder="name@example.com" required />
+                                <label htmlFor="email" className="form-label">{t.email}</label>
+                                <input type="email" id="email" name="email" className="form-input" placeholder={t.emailPlaceholder} required />
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="phoneNumber" className="form-label">Phone Number</label>
+                                <label htmlFor="phoneNumber" className="form-label">{t.phoneNumber}</label>
                                 <div style={{ display: 'flex' }}>
                                     <span style={{ padding: '0.5rem 0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRight: 'none', borderRadius: '12px 0 0 12px', color: '#4a5568', fontWeight: 600, display: 'flex', alignItems: 'center' }}>+966</span>
                                     <input
@@ -185,7 +207,7 @@ export default function RegisterPage() {
                                         id="phoneNumber"
                                         name="phoneNumber"
                                         className="form-input"
-                                        placeholder="5X XXX XXXX"
+                                        placeholder={t.phoneNumberPlaceholder}
                                         required
                                         style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
                                         onInput={(e) => {
@@ -199,70 +221,78 @@ export default function RegisterPage() {
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="dateOfBirth" className="form-label">Date of Birth</label>
-                                <input type="date" id="dateOfBirth" name="dateOfBirth" className="form-input" required />
+                                <label htmlFor="dateOfBirth" className="form-label">
+                                    {t.dateOfBirth}
+                                </label>
+
+                                <input
+                                    type="date"
+                                    id="dateOfBirth"
+                                    name="dateOfBirth"
+                                    className="form-input"
+                                    lang={lang}
+                                    dir={lang === 'ar' ? 'rtl' : 'ltr'}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="nationalId" className="form-label">{t.nationalId}</label>
+                                <input type="text" id="nationalId" name="nationalId" className="form-input" placeholder={t.nationalIdPlaceholder} />
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="nationalId" className="form-label">National ID</label>
-                                <input type="text" id="nationalId" name="nationalId" className="form-input" placeholder="e.g. 1023456789" />
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">Gender</label>
+                                <label className="form-label">{t.gender}</label>
                                 <div className="form-group-inline">
-                                    <label className="form-radio"><input type="radio" name="gender" value="Male" defaultChecked /> Male</label>
-                                    <label className="form-radio"><input type="radio" name="gender" value="Female" /> Female</label>
+                                    <label className="form-radio"><input type="radio" name="gender" value="Male" defaultChecked /> {t.male}</label>
+                                    <label className="form-radio"><input type="radio" name="gender" value="Female" /> {t.female}</label>
                                 </div>
                             </div>
 
                             {userType === 'provider' && (
                                 <div className="form-group">
-                                    <label htmlFor="businessName" className="form-label">Business Name (optional)</label>
-                                    <input type="text" id="businessName" name="businessName" className="form-input" placeholder="Your business name" />
+                                    <label htmlFor="businessName" className="form-label">{t.businessNameOptional}</label>
+                                    <input type="text" id="businessName" name="businessName" className="form-input" placeholder={t.businessNamePlaceholder} />
                                 </div>
                             )}
 
                             {userType === 'seeker' && (
                                 <div className="form-group">
-                                    <label htmlFor="companyName" className="form-label">Company (optional)</label>
-                                    <input type="text" id="companyName" name="companyName" className="form-input" placeholder="Company name" />
+                                    <label htmlFor="companyName" className="form-label">{t.companyOptional}</label>
+                                    <input type="text" id="companyName" name="companyName" className="form-input" placeholder={t.companyNamePlaceholder} />
                                 </div>
                             )}
 
-                            {/* Password with eye toggle */}
                             <div className="form-group">
-                                <label htmlFor="password" className="form-label">Password</label>
+                                <label htmlFor="password" className="form-label">{t.password}</label>
                                 <div style={{ position: 'relative' }}>
                                     <input
                                         type={showPassword ? 'text' : 'password'}
                                         id="password"
                                         name="password"
                                         className="form-input"
-                                        placeholder="Create a strong password"
+                                        placeholder={t.createStrongPassword}
                                         required
                                         style={{ paddingRight: '40px', width: '100%', boxSizing: 'border-box' }}
                                     />
-                                    <button type="button" style={eyeStyle} onClick={() => setShowPassword(v => !v)} aria-label="Toggle password visibility">
+                                    <button type="button" style={eyeStyle} onClick={() => setShowPassword(v => !v)} aria-label={t.togglePasswordVisibility}>
                                         <i className={`fa-regular ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Confirm password with eye toggle */}
                             <div className="form-group">
-                                <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+                                <label htmlFor="confirmPassword" className="form-label">{t.confirmPassword}</label>
                                 <div style={{ position: 'relative' }}>
                                     <input
                                         type={showConfirm ? 'text' : 'password'}
                                         id="confirmPassword"
                                         name="confirmPassword"
                                         className="form-input"
-                                        placeholder="Re-enter your password"
+                                        placeholder={t.reEnterPassword}
                                         required
                                         style={{ paddingRight: '40px', width: '100%', boxSizing: 'border-box' }}
                                     />
-                                    <button type="button" style={eyeStyle} onClick={() => setShowConfirm(v => !v)} aria-label="Toggle confirm password visibility">
+                                    <button type="button" style={eyeStyle} onClick={() => setShowConfirm(v => !v)} aria-label={t.toggleConfirmPasswordVisibility}>
                                         <i className={`fa-regular ${showConfirm ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                     </button>
                                 </div>
@@ -278,7 +308,7 @@ export default function RegisterPage() {
                                         onChange={(e) => setTermsAccepted(e.target.checked)}
                                     />
                                     <span>
-                                        I agree to{' '}
+                                        {t.iAgreeTo}{' '}
                                         <a
                                             href="#"
                                             onClick={(e) => {
@@ -287,18 +317,18 @@ export default function RegisterPage() {
                                             }}
                                             style={{ color: '#ff6b35', textDecoration: 'underline', cursor: 'pointer' }}
                                         >
-                                            Si&apos;aa&apos;s Terms &amp; Privacy Policy
+                                            {t.termsPrivacyPolicy}
                                         </a>
                                     </span>
                                 </label>
                             </div>
 
                             <button type="submit" className="btn btn-dark btn-large auth-submit" disabled={loading}>
-                                {loading ? 'Creating account...' : 'Sign up'}
+                                {loading ? t.creatingAccount : t.signUp}
                             </button>
 
                             <p className="auth-switch">
-                                Already have an account? <a href="/login">Log in</a>
+                                {t.alreadyHaveAccount} <a href="/login">{t.logIn}</a>
                             </p>
                         </form>
                     </div>
@@ -309,19 +339,18 @@ export default function RegisterPage() {
                 <div className="container">
                     <div className="footer-content">
                         <div className="social-icons">
-                            <a href="#" aria-label="Facebook"><i className="fa-brands fa-facebook"></i></a>
-                            <a href="#" aria-label="LinkedIn"><i className="fa-brands fa-linkedin-in"></i></a>
-                            <a href="#" aria-label="X"><i className="fa-brands fa-x-twitter"></i></a>
-                            <a href="#" aria-label="Instagram"><i className="fa-brands fa-instagram"></i></a>
+                            <a href="#" aria-label={t.facebook}><i className="fa-brands fa-facebook"></i></a>
+                            <a href="#" aria-label={t.linkedin}><i className="fa-brands fa-linkedin-in"></i></a>
+                            <a href="#" aria-label={t.x}><i className="fa-brands fa-x-twitter"></i></a>
+                            <a href="#" aria-label={t.instagram}><i className="fa-brands fa-instagram"></i></a>
                         </div>
                         <div className="footer-logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="footer-logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="footer-logo-img" />
                         </div>
                     </div>
                 </div>
             </footer>
 
-            {/* Terms & Privacy Modal */}
             {showTermsModal && (
                 <div style={{
                     display: 'flex', position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
@@ -335,60 +364,57 @@ export default function RegisterPage() {
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Modal Header */}
                         <div style={{
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                             padding: '20px 24px', borderBottom: '1px solid #e2e8f0',
                             background: '#fff'
                         }}>
                             <h2 style={{ margin: 0, fontSize: '20px', color: '#1a365d', fontWeight: 700 }}>
-                                Terms &amp; Privacy Policy
+                                {t.termsPrivacyPolicy}
                             </h2>
                             <button onClick={() => setShowTermsModal(false)} style={{
                                 background: '#f3f4f6', border: 'none', color: '#6b7280',
                                 width: '32px', height: '32px', borderRadius: '50%', fontSize: '18px',
                                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 lineHeight: 1,
-                            }} aria-label="Close">&times;</button>
+                            }} aria-label={t.close}>&times;</button>
                         </div>
 
-                        {/* Modal Body */}
                         <div style={{ overflowY: 'auto', padding: '28px', lineHeight: 1.7, color: '#2d3748', fontSize: '15px' }}>
-                            <h3 style={{ color: '#1a365d', marginTop: 0 }}>1. Acceptance of Terms</h3>
-                            <p>By registering for and using Si&apos;aa, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree, please do not use the platform.</p>
+                            <h3 style={{ color: '#1a365d', marginTop: 0 }}>{t.terms1Title}</h3>
+                            <p>{t.terms1Text}</p>
 
-                            <h3 style={{ color: '#1a365d' }}>2. Use of the Platform</h3>
-                            <p>Si&apos;aa connects storage space seekers with storage space providers in Jeddah and beyond. You agree to use the platform only for its intended purpose and in compliance with all applicable laws and regulations in the Kingdom of Saudi Arabia.</p>
+                            <h3 style={{ color: '#1a365d' }}>{t.terms2Title}</h3>
+                            <p>{t.terms2Text}</p>
 
-                            <h3 style={{ color: '#1a365d' }}>3. Account Responsibilities</h3>
-                            <p>You are responsible for maintaining the confidentiality of your account credentials. You must notify us immediately of any unauthorized use of your account. Si&apos;aa is not liable for any loss resulting from your failure to protect your credentials.</p>
+                            <h3 style={{ color: '#1a365d' }}>{t.terms3Title}</h3>
+                            <p>{t.terms3Text}</p>
 
-                            <h3 style={{ color: '#1a365d' }}>4. Bookings &amp; Payments</h3>
-                            <p>All bookings made through Si&apos;aa are binding agreements between the seeker and the provider. Payments are processed securely. Cancellation and refund policies vary per listing and will be shown clearly before booking confirmation.</p>
+                            <h3 style={{ color: '#1a365d' }}>{t.terms4Title}</h3>
+                            <p>{t.terms4Text}</p>
 
-                            <h3 style={{ color: '#1a365d' }}>5. Provider Obligations</h3>
-                            <p>Storage providers agree to accurately describe their spaces, maintain availability as listed, and provide safe and accessible storage as agreed. Misrepresentation of a space may result in account suspension.</p>
+                            <h3 style={{ color: '#1a365d' }}>{t.terms5Title}</h3>
+                            <p>{t.terms5Text}</p>
 
-                            <h3 style={{ color: '#1a365d' }}>6. Privacy Policy</h3>
-                            <p>We collect personal information including your name, email, phone number, and location to operate the Si&apos;aa platform. Your data is stored securely and will not be sold to third parties. We use your information to facilitate bookings, send notifications (based on your preferences), and improve our service.</p>
-                            <p>By registering, you consent to receiving transactional emails, SMS, and in-app notifications related to your account and bookings. You may adjust these preferences at any time in your Dashboard → Settings.</p>
+                            <h3 style={{ color: '#1a365d' }}>{t.terms6Title}</h3>
+                            <p>{t.terms6Text1}</p>
+                            <p>{t.terms6Text2}</p>
 
-                            <h3 style={{ color: '#1a365d' }}>7. Prohibited Activities</h3>
-                            <p>You may not use Si&apos;aa to store illegal or hazardous materials, conduct fraudulent bookings, or harm other users. Violations will result in immediate account suspension and potential legal action.</p>
+                            <h3 style={{ color: '#1a365d' }}>{t.terms7Title}</h3>
+                            <p>{t.terms7Text}</p>
 
-                            <h3 style={{ color: '#1a365d' }}>8. Limitation of Liability</h3>
-                            <p>Si&apos;aa acts as an intermediary and is not liable for loss or damage to stored items beyond what is explicitly covered in individual listing agreements. We strongly recommend obtaining appropriate insurance.</p>
+                            <h3 style={{ color: '#1a365d' }}>{t.terms8Title}</h3>
+                            <p>{t.terms8Text}</p>
 
-                            <h3 style={{ color: '#1a365d' }}>9. Modifications</h3>
-                            <p>We reserve the right to modify these terms at any time. Continued use of the platform after changes constitutes acceptance of the updated terms.</p>
+                            <h3 style={{ color: '#1a365d' }}>{t.terms9Title}</h3>
+                            <p>{t.terms9Text}</p>
 
-                            <h3 style={{ color: '#1a365d' }}>10. Contact</h3>
-                            <p>For questions about these terms, contact us at <a href="mailto:support@siaa.sa" style={{ color: '#ff6b35' }}>support@siaa.sa</a>.</p>
+                            <h3 style={{ color: '#1a365d' }}>{t.terms10Title}</h3>
+                            <p>{t.terms10Text} <a href="mailto:support@siaa.sa" style={{ color: '#ff6b35' }}>support@siaa.sa</a>.</p>
 
-                            <p style={{ marginTop: '24px', fontSize: '13px', color: '#718096' }}>Last updated: February 2026</p>
+                            <p style={{ marginTop: '24px', fontSize: '13px', color: '#718096' }}>{t.lastUpdatedFebruary2026}</p>
                         </div>
 
-                        {/* Modal Footer */}
                         <div style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
                             <button
                                 type="button"
@@ -401,7 +427,7 @@ export default function RegisterPage() {
                                     color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px',
                                     fontWeight: 600, cursor: 'pointer',
                                 }}>
-                                Accept
+                                {t.accept}
                             </button>
                         </div>
                     </div>

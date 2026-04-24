@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -21,13 +22,17 @@ export const metadata: Metadata = {
     robots: { index: true, follow: true },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const cookieStore = await cookies();
+    const lang = cookieStore.get('lang')?.value === 'ar' ? 'ar' : 'en';
+    const dir = lang === 'ar' ? 'rtl' : 'ltr';
+
     return (
-        <html lang="en">
+        <html lang={lang} dir={dir}>
             <head>
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

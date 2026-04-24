@@ -213,3 +213,25 @@ body {
     cursor: default;
     opacity: 0.4;
 }
+
+.language-toggle {
+    font-weight: 500;
+    color: #64748b;
+    /* default gray */
+}
+
+.language-toggle a {
+    text-decoration: none;
+    color: #64748b;
+    transition: color 0.2s ease;
+}
+
+.language-toggle a:hover {
+    color: #ff6b35;
+}
+
+/* ACTIVE language = orange */
+.language-toggle .active {
+    color: #ff6b35;
+    font-weight: 700;
+}

@@ -1,12 +1,53 @@
 'use client';
+
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Loader from '@/components/Loader';
+import LanguageToggle from '@/app/components/LanguageToggle';
+import { translations, type Language } from '@/lib/translations';
+
+function getCurrentLang(): Language {
+    if (typeof document === 'undefined') return 'en';
+
+    const match = document.cookie.match(/(?:^|; )lang=([^;]+)/);
+    return match?.[1] === 'ar' ? 'ar' : 'en';
+}
+
+function usePageLanguage(): Language {
+    const [lang, setLang] = useState<Language>(() => getCurrentLang());
+
+    useEffect(() => {
+        setLang(getCurrentLang());
+    }, []);
+
+    return lang;
+}
+
+function BookingMapLoading() {
+    const lang = usePageLanguage();
+    const t = translations[lang];
+
+    return (
+        <div
+            style={{
+                height: '200px',
+                width: '100%',
+                background: '#edf2f7',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            }}
+        >
+            {t.loadingMap}
+        </div>
+    );
+}
 
 const BookingMap = dynamic(() => import('./BookingMap'), {
     ssr: false,
-    loading: () => <div style={{ height: '200px', width: '100%', background: '#edf2f7', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading Map...</div>
+    loading: () => <BookingMapLoading />
 });
 
 const LOGISTICS_PRICES = {
@@ -15,7 +56,9 @@ const LOGISTICS_PRICES = {
     spl: 55
 };
 
-function BookingPageContent() {
+function BookingPageContent({ lang }: { lang: Language }) {
+    const t = translations[lang];
+
     const searchParams = useSearchParams();
     const router = useRouter();
     const spaceId = parseInt(searchParams.get('spaceId') || '0', 10);
@@ -36,7 +79,7 @@ function BookingPageContent() {
 
     useEffect(() => {
         if (!spaceId) {
-            setError('No space selected. Please go back and choose a space.');
+            setError(t.noSpaceSelected);
             setLoading(false);
             return;
         }
@@ -48,14 +91,12 @@ function BookingPageContent() {
                 const data = await res.json();
                 setSpace(data.space || data);
 
-                // Fetch reviews silently
                 fetch(`/api/spaces/${spaceId}/reviews`)
                     .then(r => r.json())
                     .then(d => setReviews(d.reviews || []))
                     .catch(() => { });
-
             } catch (err) {
-                setError('Could not load space details. Please go back and try again.');
+                setError(t.couldNotLoadSpace);
             } finally {
                 setLoading(false);
             }
@@ -63,11 +104,10 @@ function BookingPageContent() {
 
         fetchSpace();
 
-        // Ensure inputs don't start before today
         const today = new Date().toISOString().split('T')[0];
         setStartDate(today);
         setEndDate(today);
-    }, [spaceId]);
+    }, [spaceId, t.noSpaceSelected, t.couldNotLoadSpace]);
 
     const calculateTotal = () => {
         if (!startDate || !endDate || !space) return null;
@@ -94,7 +134,6 @@ function BookingPageContent() {
             total = Math.max(1, Math.ceil(months)) * parseFloat(space.PricePerMonth);
         }
 
-        // Add logistics options if selected
         if (logistics === 'partner_pickup' && logisticsCompany && LOGISTICS_PRICES[logisticsCompany as keyof typeof LOGISTICS_PRICES]) {
             total += LOGISTICS_PRICES[logisticsCompany as keyof typeof LOGISTICS_PRICES];
         }
@@ -103,32 +142,42 @@ function BookingPageContent() {
     };
 
     const formatPrice = (value: number) => {
-        return Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        return Number(value).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
     };
 
     const costDetails = calculateTotal();
 
     const handleSubmit = async () => {
         setError('');
-        if (!startDate || !endDate) return setError('Please select start and end dates.');
-        if (new Date(endDate) <= new Date(startDate)) return setError('End date must be after start date.');
+
+        if (!startDate || !endDate) {
+            return setError(t.selectStartEndDates);
+        }
+
+        if (new Date(endDate) <= new Date(startDate)) {
+            return setError(t.endDateAfterStart);
+        }
 
         if (logistics === 'partner_pickup') {
-            if (!logisticsCompany) return setError('Please select a logistics company.');
-            
+            if (!logisticsCompany) return setError(t.selectLogisticsCompany);
+
             const trimmedAddress = nationalAddress.trim();
-            if (!trimmedAddress) return setError('Please enter your National Address.');
-            
+            if (!trimmedAddress) return setError(t.enterNationalAddress);
+
             const addressRegex = /^[A-Za-z]{4}\d{4}$/;
             if (!addressRegex.test(trimmedAddress)) {
-                return setError('National Address must be exactly 4 letters followed by 4 numbers (e.g., ABCD1234).');
+                return setError(t.nationalAddressFormat);
             }
 
-            if (!pickupTime) return setError('Please select a pickup time.');
+            if (!pickupTime) return setError(t.selectPickupTime);
         }
 
         const token = localStorage.getItem('siaaToken');
         const userDataStr = localStorage.getItem('siaaUser');
+
         if (!token || !userDataStr) {
             router.push(`/login?redirect=booking?spaceId=${spaceId}`);
             return;
@@ -138,18 +187,24 @@ function BookingPageContent() {
         setSubmitting(true);
 
         const payloadLogistics = logistics;
-        const specialRequestsData = logistics === 'partner_pickup'
-            ? JSON.stringify({ type: 'partner_pickup', company: logisticsCompany, address: nationalAddress.trim(), time: pickupTime })
-            : '';
+        const specialRequestsData =
+            logistics === 'partner_pickup'
+                ? JSON.stringify({
+                    type: 'partner_pickup',
+                    company: logisticsCompany,
+                    address: nationalAddress.trim(),
+                    time: pickupTime
+                })
+                : '';
 
         try {
             const res = await fetch(`/api/bookings`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    Authorization: `Bearer ${token}`,
                     'x-user-id': String(user.id || user.SeekerID),
-                    'x-user-type': user.userType || 'seeker',
+                    'x-user-type': user.userType || 'seeker'
                 },
                 body: JSON.stringify({
                     spaceId,
@@ -158,17 +213,16 @@ function BookingPageContent() {
                     logisticsOption: payloadLogistics,
                     specialRequests: specialRequestsData,
                     totalAmount: costDetails?.total
-                }),
+                })
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || data.message || 'Booking failed');
+            if (!res.ok) throw new Error(data.error || data.message || t.bookingFailed);
 
             const newBookingId = data.bookingId || data.BookingID;
             router.push(`/payment?bookingId=${newBookingId}`);
-
         } catch (err: any) {
-            setError(err.message || 'Something went wrong. Please try again.');
+            setError(err.message || t.genericTryAgain);
             setSubmitting(false);
         }
     };
@@ -186,79 +240,88 @@ function BookingPageContent() {
             <div className="container" style={{ padding: '80px 20px', textAlign: 'center' }}>
                 <div style={{ padding: '60px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                     <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '48px', color: '#e63946' }}></i>
-                    <h2 style={{ marginTop: '20px', color: '#1a365d' }}>Oops!</h2>
+                    <h2 style={{ marginTop: '20px', color: '#1a365d' }}>{t.oops}</h2>
                     <p style={{ marginTop: '10px', color: '#718096' }}>{error}</p>
-                    <button onClick={() => router.push('/search')} className="btn btn-dark" style={{ marginTop: '20px' }}>Back to Search</button>
+                    <button onClick={() => router.push('/search')} className="btn btn-dark" style={{ marginTop: '20px' }}>
+                        {t.backToSearch}
+                    </button>
                 </div>
             </div>
         );
     }
 
     const addr = [space?.AddressLine1, space?.City].filter(Boolean).join(', ');
-    const fullAddress = space?.Landmark ? `${addr} · Near ${space.Landmark}` : addr;
-    const providerName = space?.BusinessName || `${space?.ProviderFirstName || ''} ${space?.ProviderLastName || ''}`.trim() || '—';
+    const fullAddress = space?.Landmark ? `${addr} · ${t.near} ${space.Landmark}` : addr;
+    const providerName =
+        space?.BusinessName ||
+        `${space?.ProviderFirstName || ''} ${space?.ProviderLastName || ''}`.trim() ||
+        '—';
 
     return (
         <section className="booking-section">
             <div className="container">
-                <h1 className="booking-title">Complete Your Request</h1>
+                <h1 className="booking-title">{t.completeYourRequest}</h1>
 
                 <div className="booking-layout">
-                    {/* LEFT: main info + logistics */}
                     <div className="booking-main-card">
-
                         <div className="booking-space-header">
-                            <h2 className="booking-space-type">{space?.Title || space?.SpaceType || 'Storage Space'}</h2>
+                            <h2 className="booking-space-type">{space?.Title || space?.SpaceType || t.storageSpace}</h2>
                             <p className="booking-space-address">{fullAddress}</p>
                             <p className="booking-space-date">
-                                {space?.CreatedAt && `Listed ${new Date(space.CreatedAt).toLocaleDateString('en-SA', { month: 'long', year: 'numeric' })}`}
+                                {space?.CreatedAt &&
+                                    `${t.listed} ${new Date(space.CreatedAt).toLocaleDateString(
+                                        lang === 'ar' ? 'ar-SA' : 'en-SA',
+                                        { month: 'long', year: 'numeric' }
+                                    )}`}
                             </p>
                         </div>
 
                         <div className="booking-meta-grid">
                             <div className="booking-meta-item">
-                                <span className="booking-meta-label">Rent</span>
-                                <span className="booking-meta-value">{space?.PricePerMonth ? `${formatPrice(space.PricePerMonth)} SAR/mo` : '—'}</span>
+                                <span className="booking-meta-label">{t.rent}</span>
+                                <span className="booking-meta-value">
+                                    {space?.PricePerMonth ? `${formatPrice(space.PricePerMonth)} ${t.sarPerMonth}` : '—'}
+                                </span>
                             </div>
                             <div className="booking-meta-item">
-                                <span className="booking-meta-label">Location</span>
+                                <span className="booking-meta-label">{t.location}</span>
                                 <span className="booking-meta-value">{space?.City || 'Jeddah'}</span>
                             </div>
                             <div className="booking-meta-item">
-                                <span className="booking-meta-label">Space</span>
+                                <span className="booking-meta-label">{t.space}</span>
                                 <span className="booking-meta-value">{space?.Size ? `${space.Size} m²` : '—'}</span>
                             </div>
                         </div>
 
                         <div className="booking-tags">
-                            {space?.ClimateControlled && <span className="booking-tag">❄️ Climate-controlled</span>}
-                            {space?.SecuritySystem && <span className="booking-tag">🔒 Security</span>}
-                            {space?.ParkingAvailable && <span className="booking-tag">🚗 Parking</span>}
-                            {space?.LoadingAssistance && <span className="booking-tag">🏗️ Loading help</span>}
+                            {space?.ClimateControlled && <span className="booking-tag">❄️ {t.climateControlled}</span>}
+                            {space?.SecuritySystem && <span className="booking-tag">🔒 {t.security}</span>}
+                            {space?.ParkingAvailable && <span className="booking-tag">🚗 {t.parking}</span>}
+                            {space?.LoadingAssistance && <span className="booking-tag">🏗️ {t.loadingHelp}</span>}
                             {space?.AccessType && <span className="booking-tag">⏰ {space.AccessType}</span>}
                         </div>
 
-                        {/* Reviews */}
-                        {(reviews.length > 0) && (
+                        {reviews.length > 0 && (
                             <div className="booking-section-block">
-                                <h3 className="booking-section-title">Reviews For This Space</h3>
+                                <h3 className="booking-section-title">{t.reviewsForThisSpace}</h3>
                                 {reviews.slice(0, 2).map((r, i) => (
                                     <p key={i} className={`booking-review-line ${i > 0 ? 'secondary' : ''}`}>
                                         <span className="booking-stars">{'★'.repeat(r.Rating || 5)}</span>
-                                        <span className="booking-review-text">"{r.Comment || 'Great space!'}" — {r.ReviewerName || 'Verified User'}</span>
+                                        <span className="booking-review-text">
+                                            "{r.Comment || t.greatSpace}" — {r.ReviewerName || t.verifiedUser}
+                                        </span>
                                     </p>
                                 ))}
                             </div>
                         )}
 
-                        {/* Owner table */}
                         <div className="booking-section-block">
-                            <h3 className="booking-section-title">Owner</h3>
+                            <h3 className="booking-section-title">{t.owner}</h3>
                             <div className="booking-owner-table">
                                 <div className="booking-owner-row booking-owner-header">
-                                    <span>Name</span>
-                                    <span>Phone</span>
-                                    <span>Email</span>
+                                    <span>{t.name}</span>
+                                    <span>{t.phone}</span>
+                                    <span>{t.email}</span>
                                 </div>
                                 <div className="booking-owner-row">
                                     <span>{providerName}</span>
@@ -268,12 +331,11 @@ function BookingPageContent() {
                             </div>
                         </div>
 
-                        {/* Rental Dates */}
                         <div className="booking-section-block">
-                            <h3 className="booking-section-title">Rental Dates</h3>
+                            <h3 className="booking-section-title">{t.rentalDates}</h3>
                             <div className="booking-dates-grid">
                                 <div className="filter-field filter-field--date">
-                                    <span className="filter-field__label">Start Date</span>
+                                    <span className="filter-field__label">{t.startDate}</span>
                                     <input
                                         type="date"
                                         className="filter-text-input"
@@ -285,8 +347,9 @@ function BookingPageContent() {
                                         }}
                                     />
                                 </div>
+
                                 <div className="filter-field filter-field--date">
-                                    <span className="filter-field__label">End Date</span>
+                                    <span className="filter-field__label">{t.endDate}</span>
                                     <input
                                         type="date"
                                         className="filter-text-input"
@@ -298,13 +361,24 @@ function BookingPageContent() {
                             </div>
                         </div>
 
-                        {/* Logistics */}
                         <div className="booking-section-block">
-                            <h3 className="booking-section-title">Logistics</h3>
-                            <p className="booking-section-subtitle">Choose how you want your items moved.</p>
+                            <h3 className="booking-section-title">{t.logistics}</h3>
+                            <p className="booking-section-subtitle">{t.chooseHowToMoveItems}</p>
 
                             <div className="booking-logistics-options">
-                                <label className={`booking-logistics-option ${logistics === 'self_dropoff' ? 'selected' : ''}`} style={{ cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px', border: logistics === 'self_dropoff' ? '2px solid #ff6b35' : '1px solid #e2e8f0', borderRadius: '12px', marginBottom: '12px' }}>
+                                <label
+                                    className={`booking-logistics-option ${logistics === 'self_dropoff' ? 'selected' : ''}`}
+                                    style={{
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '12px',
+                                        padding: '16px',
+                                        border: logistics === 'self_dropoff' ? '2px solid #ff6b35' : '1px solid #e2e8f0',
+                                        borderRadius: '12px',
+                                        marginBottom: '12px'
+                                    }}
+                                >
                                     <input
                                         type="radio"
                                         name="logisticsOption"
@@ -315,15 +389,28 @@ function BookingPageContent() {
                                     />
                                     <div className="booking-logistics-content">
                                         <div className="booking-logistics-title-row">
-                                            <span className="booking-logistics-title" style={{ fontWeight: 'bold' }}>Self-drop-off</span>
+                                            <span className="booking-logistics-title" style={{ fontWeight: 'bold' }}>
+                                                {t.selfDropOff}
+                                            </span>
                                         </div>
                                         <p className="booking-logistics-description" style={{ marginTop: '4px', color: '#718096' }}>
-                                            Bring your items directly to the storage location during access hours.
+                                            {t.selfDropOffDesc}
                                         </p>
                                     </div>
                                 </label>
 
-                                <label className={`booking-logistics-option ${logistics === 'partner_pickup' ? 'selected' : ''}`} style={{ cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px', border: logistics === 'partner_pickup' ? '2px solid #ff6b35' : '1px solid #e2e8f0', borderRadius: '12px' }}>
+                                <label
+                                    className={`booking-logistics-option ${logistics === 'partner_pickup' ? 'selected' : ''}`}
+                                    style={{
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '12px',
+                                        padding: '16px',
+                                        border: logistics === 'partner_pickup' ? '2px solid #ff6b35' : '1px solid #e2e8f0',
+                                        borderRadius: '12px'
+                                    }}
+                                >
                                     <input
                                         type="radio"
                                         name="logisticsOption"
@@ -334,50 +421,119 @@ function BookingPageContent() {
                                     />
                                     <div className="booking-logistics-content" style={{ width: '100%' }}>
                                         <div className="booking-logistics-title-row">
-                                            <span className="booking-logistics-title" style={{ fontWeight: 'bold' }}>Si'aa-partner Pickup</span>
+                                            <span className="booking-logistics-title" style={{ fontWeight: 'bold' }}>
+                                                {t.partnerPickup}
+                                            </span>
                                         </div>
 
-                                        {/* EXPANDED LOGISTICS MENU */}
                                         {logistics === 'partner_pickup' && (
-                                            <div style={{ marginTop: '16px', paddingLeft: '28px' }} onClick={e => e.preventDefault() /* prevent collapsing parent radio */}>
-
-                                                <div style={{ marginBottom: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
+                                            <div
+                                                style={{ marginTop: '16px', paddingLeft: '28px' }}
+                                                onClick={e => e.preventDefault()}
+                                            >
+                                                <div
+                                                    style={{
+                                                        marginBottom: '16px',
+                                                        display: 'grid',
+                                                        gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                                                        gap: '12px'
+                                                    }}
+                                                >
                                                     {Object.entries(LOGISTICS_PRICES).map(([key, price]) => (
-                                                        <div key={key} onClick={(e) => { e.preventDefault(); setLogisticsCompany(key); }} style={{ padding: '12px', border: logisticsCompany === key ? '2px solid #4a5568' : '1px solid #e2e8f0', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: logisticsCompany === key ? '#f8fafc' : '#fff' }}>
+                                                        <div
+                                                            key={key}
+                                                            onClick={e => {
+                                                                e.preventDefault();
+                                                                setLogisticsCompany(key);
+                                                            }}
+                                                            style={{
+                                                                padding: '12px',
+                                                                border: logisticsCompany === key ? '2px solid #4a5568' : '1px solid #e2e8f0',
+                                                                borderRadius: '8px',
+                                                                textAlign: 'center',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                alignItems: 'center',
+                                                                gap: '8px',
+                                                                background: logisticsCompany === key ? '#f8fafc' : '#fff'
+                                                            }}
+                                                        >
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <input type="radio" checked={logisticsCompany === key} onChange={() => { }} style={{ cursor: 'pointer', accentColor: '#ff6b35' }} />
-                                                                <img src={`/Media/${key === 'aramex' ? 'Aramex.png' : key === 'smsa' ? 'SMSA.png' : 'SPL.png'}`} alt={key} style={{ height: '24px', objectFit: 'contain' }} />
-                                                                <span style={{ fontWeight: 700, fontSize: '14px', color: '#1a365d' }}>{key === 'aramex' ? 'Aramex' : key === 'smsa' ? 'SMSA' : 'SPL'}</span>
+                                                                <input
+                                                                    type="radio"
+                                                                    checked={logisticsCompany === key}
+                                                                    onChange={() => { }}
+                                                                    style={{ cursor: 'pointer', accentColor: '#ff6b35' }}
+                                                                />
+                                                                <img
+                                                                    src={`/Media/${key === 'aramex' ? 'Aramex.png' : key === 'smsa' ? 'SMSA.png' : 'SPL.png'}`}
+                                                                    alt={key}
+                                                                    style={{ height: '24px', objectFit: 'contain' }}
+                                                                />
+                                                                <span style={{ fontWeight: 700, fontSize: '14px', color: '#1a365d' }}>
+                                                                    {key === 'aramex' ? 'Aramex' : key === 'smsa' ? 'SMSA' : 'SPL'}
+                                                                </span>
                                                             </div>
-                                                            <span style={{ fontWeight: 600, fontSize: '13px', color: '#1a365d' }}>{price} SAR</span>
+                                                            <span style={{ fontWeight: 600, fontSize: '13px', color: '#1a365d' }}>
+                                                                {price} {t.sar}
+                                                            </span>
                                                         </div>
                                                     ))}
                                                 </div>
 
                                                 <div style={{ marginBottom: '16px' }}>
-                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#4a5568', marginBottom: '6px' }}>National Address</label>
+                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#4a5568', marginBottom: '6px' }}>
+                                                        {t.nationalAddress}
+                                                    </label>
                                                     <input
                                                         type="text"
                                                         value={nationalAddress}
                                                         onChange={e => setNationalAddress(e.target.value)}
-                                                        placeholder="e.g., ABCD1234"
+                                                        placeholder={t.nationalAddressPlaceholder}
                                                         className="filter-text-input"
                                                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e0' }}
                                                     />
                                                 </div>
 
                                                 <div>
-                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#4a5568', marginBottom: '6px' }}>Preferred Pickup Time</label>
+                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#4a5568', marginBottom: '6px' }}>
+                                                        {t.preferredPickupTime}
+                                                    </label>
                                                     <div style={{ display: 'flex', gap: '12px' }}>
-                                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', cursor: 'pointer' }} onClick={e => { e.preventDefault(); setPickupTime('9am-3pm'); }}>
-                                                            <input type="radio" checked={pickupTime === '9am-3pm'} onChange={() => { }} style={{ accentColor: '#ff6b35' }} /> 9:00 AM - 3:00 PM
+                                                        <label
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', cursor: 'pointer' }}
+                                                            onClick={e => {
+                                                                e.preventDefault();
+                                                                setPickupTime('9am-3pm');
+                                                            }}
+                                                        >
+                                                            <input
+                                                                type="radio"
+                                                                checked={pickupTime === '9am-3pm'}
+                                                                onChange={() => { }}
+                                                                style={{ accentColor: '#ff6b35' }}
+                                                            />
+                                                            {t.pickupSlotOne}
                                                         </label>
-                                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', cursor: 'pointer' }} onClick={e => { e.preventDefault(); setPickupTime('4pm-10pm'); }}>
-                                                            <input type="radio" checked={pickupTime === '4pm-10pm'} onChange={() => { }} style={{ accentColor: '#ff6b35' }} /> 4:00 PM - 10:00 PM
+
+                                                        <label
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', cursor: 'pointer' }}
+                                                            onClick={e => {
+                                                                e.preventDefault();
+                                                                setPickupTime('4pm-10pm');
+                                                            }}
+                                                        >
+                                                            <input
+                                                                type="radio"
+                                                                checked={pickupTime === '4pm-10pm'}
+                                                                onChange={() => { }}
+                                                                style={{ accentColor: '#ff6b35' }}
+                                                            />
+                                                            {t.pickupSlotTwo}
                                                         </label>
                                                     </div>
                                                 </div>
-
                                             </div>
                                         )}
                                     </div>
@@ -398,46 +554,69 @@ function BookingPageContent() {
                                 disabled={submitting}
                                 className="btn btn-dark btn-large booking-submit"
                             >
-                                {submitting ? <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '8px' }}></i> Processing...</> : 'Proceed to Payment'}
+                                {submitting ? (
+                                    <>
+                                        <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                                        {t.processing}
+                                    </>
+                                ) : (
+                                    t.proceedToPayment
+                                )}
                             </button>
                         </div>
                     </div>
 
-                    {/* RIGHT: Map & summary */}
                     <aside className="booking-side-card">
-                        <h3 className="booking-side-title">Location</h3>
+                        <h3 className="booking-side-title">{t.location}</h3>
                         <div className="booking-map" style={{ height: '200px', borderRadius: '12px', overflow: 'hidden' }}>
-                            {(space?.Latitude && space?.Longitude) ? (
+                            {space?.Latitude && space?.Longitude ? (
                                 <BookingMap lat={parseFloat(space.Latitude)} lng={parseFloat(space.Longitude)} />
                             ) : (
-                                <img src="/Media/TempBookingMap.png.png" alt="Map Placeholder" className="booking-map-img" style={{ height: '200px', width: '100%', objectFit: 'cover' }} />
+                                <img
+                                    src="/Media/TempBookingMap.png.png"
+                                    alt={t.mapPlaceholder}
+                                    className="booking-map-img"
+                                    style={{ height: '200px', width: '100%', objectFit: 'cover' }}
+                                />
                             )}
                         </div>
 
                         <div className="booking-side-summary">
                             <div className="booking-side-row">
-                                <span className="booking-side-label">Space</span>
-                                <span className="booking-side-value">{space?.SpaceType || 'Storage'}</span>
+                                <span className="booking-side-label">{t.space}</span>
+                                <span className="booking-side-value">{space?.SpaceType || t.storage}</span>
                             </div>
+
                             <div className="booking-side-row">
-                                <span className="booking-side-label">Dates</span>
+                                <span className="booking-side-label">{t.dates}</span>
                                 <span className="booking-side-value">
                                     {startDate && endDate && costDetails
-                                        ? `${new Date(startDate).toLocaleDateString('en-SA', { day: 'numeric', month: 'short' })} – ${new Date(endDate).toLocaleDateString('en-SA', { day: 'numeric', month: 'short' })} (${costDetails.days} days)`
-                                        : 'Select your dates'
-                                    }
+                                        ? `${new Date(startDate).toLocaleDateString(
+                                            lang === 'ar' ? 'ar-SA' : 'en-SA',
+                                            { day: 'numeric', month: 'short' }
+                                        )} – ${new Date(endDate).toLocaleDateString(
+                                            lang === 'ar' ? 'ar-SA' : 'en-SA',
+                                            { day: 'numeric', month: 'short' }
+                                        )} (${costDetails.days} ${t.days})`
+                                        : t.selectYourDates}
                                 </span>
                             </div>
+
                             {logistics === 'partner_pickup' && logisticsCompany && (
                                 <div className="booking-side-row">
-                                    <span className="booking-side-label">Logistics ({logisticsCompany.toUpperCase()})</span>
-                                    <span className="booking-side-value">{LOGISTICS_PRICES[logisticsCompany as keyof typeof LOGISTICS_PRICES]} SAR</span>
+                                    <span className="booking-side-label">
+                                        {t.logistics} ({logisticsCompany.toUpperCase()})
+                                    </span>
+                                    <span className="booking-side-value">
+                                        {LOGISTICS_PRICES[logisticsCompany as keyof typeof LOGISTICS_PRICES]} {t.sar}
+                                    </span>
                                 </div>
                             )}
+
                             <div className="booking-side-row">
-                                <span className="booking-side-label">Estimated total</span>
+                                <span className="booking-side-label">{t.estimatedTotal}</span>
                                 <span className="booking-side-total">
-                                    {costDetails ? `${formatPrice(costDetails.total)} SAR` : '—'}
+                                    {costDetails ? `${formatPrice(costDetails.total)} ${t.sar}` : '—'}
                                 </span>
                             </div>
                         </div>
@@ -449,39 +628,68 @@ function BookingPageContent() {
 }
 
 export default function BookingPage() {
+    const [lang, setLang] = useState<Language | null>(null);
+
+    useEffect(() => {
+        setLang(getCurrentLang());
+    }, []);
+
+    if (!lang) {
+        return (
+            <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+                <Loader />
+            </div>
+        );
+    }
+
+    const t = translations[lang];
+
     return (
         <>
             <header className="header">
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                    <LanguageToggle />
+                </div>
+
                 <div className="container">
                     <div className="header-content">
+
+
                         <nav className="nav">
-                            <a href="/dashboard">Dashboard</a>
-                            <a href="/#about">About</a>
-                            <a href="/#features">Features</a>
-                            <a href="/#how-it-works">How It Works</a>
+                            <a href="/dashboard">{t.dashboard}</a>
+                            <a href="#about">{t.about}</a>
+                            <a href="#features">{t.features}</a>
+                            <a href="#how-it-works">{t.howItWorks}</a>
                         </nav>
+
                         <div className="logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
                     </div>
                 </div>
             </header>
 
-            <Suspense fallback={<div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>}>
-                <BookingPageContent />
+            <Suspense
+                fallback={
+                    <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+                        <Loader />
+                    </div>
+                }
+            >
+                <BookingPageContent key={lang} lang={lang} />
             </Suspense>
 
             <footer className="footer">
                 <div className="container">
                     <div className="footer-content">
                         <div className="social-icons">
-                            <a href="#" aria-label="Facebook"><i className="fa-brands fa-facebook"></i></a>
-                            <a href="#" aria-label="LinkedIn"><i className="fa-brands fa-linkedin-in"></i></a>
-                            <a href="#" aria-label="X"><i className="fa-brands fa-x-twitter"></i></a>
-                            <a href="#" aria-label="Instagram"><i className="fa-brands fa-instagram"></i></a>
+                            <a href="#" aria-label={t.facebook}><i className="fa-brands fa-facebook"></i></a>
+                            <a href="#" aria-label={t.linkedin}><i className="fa-brands fa-linkedin-in"></i></a>
+                            <a href="#" aria-label={t.x}><i className="fa-brands fa-x-twitter"></i></a>
+                            <a href="#" aria-label={t.instagram}><i className="fa-brands fa-instagram"></i></a>
                         </div>
                         <div className="footer-logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="footer-logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="footer-logo-img" />
                         </div>
                     </div>
                 </div>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { translations, type Language } from '@/lib/translations';
 import LanguageToggle from '@/app/components/LanguageToggle';
-
+import Script from 'next/script';
 export const metadata: Metadata = {
     title: "Si'aa — Store Smart. Nearby. Hassle-Free.",
     description:
@@ -56,7 +56,7 @@ export default async function HomePage() {
                         </nav>
 
                         <div className="logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
                     </div>
                 </div>
@@ -103,7 +103,7 @@ export default async function HomePage() {
                             <div className="why-image">
                                 <img
                                     src="/Media/Image.png"
-                                    alt="High Cost & Wasted Space"
+                                    alt={t.highCostAlt}
                                 />
                             </div>
 
@@ -120,7 +120,7 @@ export default async function HomePage() {
                             <div className="why-image">
                                 <img
                                     src="/Media/Image (1).png"
-                                    alt="Poor Flexibility"
+                                    alt={t.poorFlexibilityAlt}
                                 />
                             </div>
 
@@ -137,7 +137,7 @@ export default async function HomePage() {
                             <div className="why-image">
                                 <img
                                     src="/Media/Image (2).png"
-                                    alt="No Visualization"
+                                    alt={t.noVisualizationAlt}
                                 />
                             </div>
 
@@ -227,7 +227,7 @@ export default async function HomePage() {
 
                         <div className="step">
                             <div className="step-icon">
-                                <img src="/Media/Search.png" alt="Search" />
+                                <img src="/Media/Search.png" alt={t.searchAlt} />
                             </div>
 
                             <h3 className="step-title">
@@ -243,7 +243,7 @@ export default async function HomePage() {
 
                         <div className="step">
                             <div className="step-icon">
-                                <img src="/Media/Visualize.png" alt="Visualize" />
+                                <img src="/Media/Visualize.png" alt={t.visualizeAlt} />
                             </div>
 
                             <h3 className="step-title">
@@ -259,7 +259,7 @@ export default async function HomePage() {
 
                         <div className="step">
                             <div className="step-icon">
-                                <img src="/Media/book.png" alt="Book" />
+                                <img src="/Media/book.png" alt={t.bookAlt} />
                             </div>
 
                             <h3 className="step-title">
@@ -275,7 +275,7 @@ export default async function HomePage() {
 
                         <div className="step">
                             <div className="step-icon">
-                                <img src="/Media/store.png" alt="Store" />
+                                <img src="/Media/store.png" alt={t.storeAlt} />
                             </div>
 
                             <h3 className="step-title">
@@ -340,7 +340,7 @@ export default async function HomePage() {
                         <div className="income-image">
                             <img
                                 src="/Media/Card (2).png"
-                                alt="Turn Your Extra Space Into Income"
+                                alt={t.turnSpaceIntoIncomeAlt}
                             />
                         </div>
 
@@ -409,7 +409,7 @@ export default async function HomePage() {
                             <div className="about-logo">
                                 <img
                                     src="/Media/Logo.png"
-                                    alt="Si'aa Logo"
+                                    alt={t.logoAlt}
                                     className="about-logo-img"
                                 />
                             </div>
@@ -458,19 +458,19 @@ export default async function HomePage() {
                 <div className="container">
                     <div className="footer-content">
                         <div className="social-icons">
-                            <a href="#" aria-label="Facebook"><i className="fa-brands fa-facebook"></i></a>
-                            <a href="#" aria-label="LinkedIn"><i className="fa-brands fa-linkedin-in"></i></a>
-                            <a href="#" aria-label="X"><i className="fa-brands fa-x-twitter"></i></a>
-                            <a href="#" aria-label="Instagram"><i className="fa-brands fa-instagram"></i></a>
+                            <a href="#" aria-label={t.facebook}><i className="fa-brands fa-facebook"></i></a>
+                            <a href="#" aria-label={t.linkedin}><i className="fa-brands fa-linkedin-in"></i></a>
+                            <a href="#" aria-label={t.x}><i className="fa-brands fa-x-twitter"></i></a>
+                            <a href="#" aria-label={t.instagram}><i className="fa-brands fa-instagram"></i></a>
                         </div>
                         <div className="footer-logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="footer-logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="footer-logo-img" />
                         </div>
                     </div>
                 </div>
             </footer>
 
-            <script src="/js/index.js" defer></script>
+            <Script src="/js/index.js" strategy="afterInteractive" />
         </>
     );
 }

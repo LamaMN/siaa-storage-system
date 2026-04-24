@@ -2,12 +2,27 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { translations, type Language } from '@/lib/translations';
 
-export default function LocationMap({ lat, lng, onChange }: {
+function getCurrentLang(): Language {
+    if (typeof document === 'undefined') return 'en';
+    const match = document.cookie.match(/(?:^|; )lang=([^;]+)/);
+    return match?.[1] === 'ar' ? 'ar' : 'en';
+}
+
+export default function LocationMap({
+    lat,
+    lng,
+    onChange
+}: {
     lat: number;
     lng: number;
     onChange: (lat: number, lng: number) => void
 }) {
+
+    const lang = getCurrentLang();
+    const t = translations[lang];
+
     const mapRef = useRef<L.Map | null>(null);
     const markerRef = useRef<L.Marker | null>(null);
 
@@ -23,14 +38,26 @@ export default function LocationMap({ lat, lng, onChange }: {
 
     useEffect(() => {
         if (!mapRef.current) {
-            mapRef.current = L.map('location-picker-map', { center: [lat || 21.5433, lng || 39.1728], zoom: 12 });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(mapRef.current);
+            mapRef.current = L.map('location-picker-map', {
+                center: [lat || 21.5433, lng || 39.1728],
+                zoom: 12
+            });
+
+            L.tileLayer(
+                'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                {
+                    maxZoom: 18,
+                    attribution: '© OpenStreetMap contributors'
+                }
+            ).addTo(mapRef.current);
 
             mapRef.current.on('click', (e) => {
                 onChange(e.latlng.lat, e.latlng.lng);
             });
 
-            setTimeout(() => { mapRef.current?.invalidateSize(); }, 300);
+            setTimeout(() => {
+                mapRef.current?.invalidateSize();
+            }, 300);
         }
     }, []);
 
@@ -39,33 +66,67 @@ export default function LocationMap({ lat, lng, onChange }: {
 
         if (lat && lng) {
             if (!markerRef.current) {
-                markerRef.current = L.marker([lat, lng], { icon: orangeIcon }).addTo(mapRef.current);
+                markerRef.current = L.marker(
+                    [lat, lng],
+                    { icon: orangeIcon }
+                ).addTo(mapRef.current);
             } else {
                 markerRef.current.setLatLng([lat, lng]);
             }
-            mapRef.current.setView([lat, lng], mapRef.current.getZoom(), { animate: true });
+
+            mapRef.current.setView(
+                [lat, lng],
+                mapRef.current.getZoom(),
+                { animate: true }
+            );
         }
     }, [lat, lng]);
 
     function useCurrentLocation() {
         if (!navigator.geolocation) {
-            alert('Geolocation is not supported by your browser.');
+            alert(t.geolocationNotSupported);
             return;
         }
+
         navigator.geolocation.getCurrentPosition(
             (pos) => {
-                onChange(pos.coords.latitude, pos.coords.longitude);
+                onChange(
+                    pos.coords.latitude,
+                    pos.coords.longitude
+                );
             },
-            () => alert('Unable to retrieve your location. Please allow location access and try again.')
+            () => alert(t.unableToRetrieveLocation)
         );
     }
 
-
     return (
         <div style={{ marginBottom: '1.5rem' }}>
-            <label className="form-label">Pin your location on the map</label>
-            <p className="step-description" style={{ fontSize: '0.85rem', marginBottom: '0.75rem' }}>Click anywhere on the map to automatically set your latitude and longitude.</p>
-            <div id="location-picker-map" style={{ width: '100%', height: '300px', borderRadius: '12px', border: '1px solid #e2e8f0', zIndex: 0 }}></div>
+
+            <label className="form-label">
+                {t.pinLocation}
+            </label>
+
+            <p
+                className="step-description"
+                style={{
+                    fontSize: '0.85rem',
+                    marginBottom: '0.75rem'
+                }}
+            >
+                {t.mapClickInstruction}
+            </p>
+
+            <div
+                id="location-picker-map"
+                style={{
+                    width: '100%',
+                    height: '300px',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    zIndex: 0
+                }}
+            />
+
             <button
                 type="button"
                 onClick={useCurrentLocation}
@@ -86,16 +147,9 @@ export default function LocationMap({ lat, lng, onChange }: {
                     gap: '0.5rem',
                 }}
             >
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <circle cx="12" cy="12" r="3"/>
-                    <line x1="12" y1="2" x2="12" y2="5"/>
-                    <line x1="12" y1="19" x2="12" y2="22"/>
-                    <line x1="2" y1="12" x2="5" y2="12"/>
-                    <line x1="19" y1="12" x2="22" y2="12"/>
-                </svg>
-                Use current location
+                {t.useCurrentLocation}
             </button>
+
         </div>
     );
 }
