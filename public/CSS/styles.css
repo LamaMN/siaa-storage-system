@@ -3395,12 +3395,15 @@ body {
         transform: translateY(-20px);
         border-bottom-color: #ff6b35;
     }
+
     75% {
         border-bottom-color: #ff6b35;
     }
+
     75.01% {
         border-bottom-color: #0056b3;
     }
+
     100% {
         transform: translateY(0);
         border-bottom-color: #0056b3;
@@ -3412,22 +3415,28 @@ body {
         transform: translateY(0) rotate(45deg);
         background-color: #0056b3;
     }
+
     24.99% {
         background-color: #0056b3;
     }
+
     25% {
         background-color: #ff6b35;
     }
+
     50% {
         transform: translateY(-20px) rotate(45deg);
         background-color: #ff6b35;
     }
+
     75% {
         background-color: #ff6b35;
     }
+
     75.01% {
         background-color: #0056b3;
     }
+
     100% {
         transform: translateY(0) rotate(45deg);
         background-color: #0056b3;
@@ -3439,12 +3448,15 @@ body {
         transform: translateY(0);
         background-color: #0056b3;
     }
+
     24.99% {
         background-color: #0056b3;
     }
+
     25% {
         background-color: #ff6b35;
     }
+
     50% {
         transform: translateY(-20px);
         background-color: #ff6b35;
