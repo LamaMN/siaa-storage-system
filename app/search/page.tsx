@@ -2,6 +2,17 @@
 import { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Loader from '@/components/Loader';
+import { useTranslateToArabic } from '@/lib/useTranslateToArabic';
+import LanguageToggle from '@/app/components/LanguageToggle';
+import { translations, type Language } from '@/lib/translations';
+
+/** Read lang cookie synchronously (client-side). Safe because cookie only changes on full reload. */
+function getT() {
+    if (typeof document === 'undefined') return translations.en;
+    const match = document.cookie.match(/(?:^|; )lang=([^;]+)/);
+    const lang: Language = match?.[1] === 'ar' ? 'ar' : 'en';
+    return translations[lang];
+}
 
 const SearchMap = dynamic(() => import('./SearchMap'), {
     ssr: false,
@@ -37,12 +48,58 @@ interface SpaceResult {
     FirstImageID?: number;
 }
 
-const SAUDI_CITIES = [
-    'Jeddah', 'Riyadh', 'Dammam', 'Mecca', 'Medina',
-    'Khobar', 'Abha', 'Tabuk', 'Taif', 'Hail',
+// City names in English (used as DB keys) + Arabic display names
+const SAUDI_CITIES: { en: string; ar: string }[] = [
+    { en: 'Jeddah', ar: 'جدة' },
+    { en: 'Riyadh', ar: 'الرياض' },
+    { en: 'Dammam', ar: 'الدمام' },
+    { en: 'Mecca', ar: 'مكة المكرمة' },
+    { en: 'Medina', ar: 'المدينة المنورة' },
+    { en: 'Khobar', ar: 'الخبر' },
+    { en: 'Abha', ar: 'أبها' },
+    { en: 'Tabuk', ar: 'تبوك' },
+    { en: 'Taif', ar: 'الطائف' },
+    { en: 'Hail', ar: 'حائل' },
 ];
 
+// Maps every known AddressLine2 value (lowercased) → { en display name, ar display name }
+// Covers both slug format ("al-rawdah") and full English format ("Al Rawdah District") as stored in DB.
+const NEIGHBORHOOD_LABEL: Record<string, { en: string; ar: string }> = {
+    // ── slugs ──────────────────────────────────────────────────────────────
+    'al-salama': { en: 'Al-Salama', ar: 'السلامة' },
+    'al-rawdah': { en: 'Al-Rawdah', ar: 'الروضة' },
+    'al-nahda': { en: 'Al-Nahda', ar: 'النهضة' },
+    'al-andalus': { en: 'Al-Andalus', ar: 'الأندلس' },
+    'al-hamra': { en: 'Al-Hamra', ar: 'الحمراء' },
+    'al-rehab': { en: 'Al-Rehab', ar: 'الرحاب' },
+    'al-faisaliyah': { en: 'Al-Faisaliyah', ar: 'الفيصلية' },
+    'al-naeem': { en: 'Al-Naeem', ar: 'النعيم' },
+    'al-basateen': { en: 'Al-Basateen', ar: 'البساتين' },
+    'al-shati': { en: 'Al-Shati', ar: 'الشاطئ' },
+    'al-safa': { en: 'Al-Safa', ar: 'الصفا' },
+    'al-aziziyah': { en: 'Al-Aziziyah', ar: 'العزيزية' },
+    'al-baghdadiyah': { en: 'Al-Baghdadiyah', ar: 'البغدادية' },
+    'al-balad': { en: 'Al-Balad', ar: 'البلد' },
+    // ── full English names (as actually stored in DB) ───────────────────────
+    'al andalus district': { en: 'Al-Andalus', ar: 'الأندلس' },
+    'al aziziyah district': { en: 'Al-Aziziyah', ar: 'العزيزية' },
+    'al faisaliah area': { en: 'Al-Faisaliyah', ar: 'الفيصلية' },
+    'al hamra district': { en: 'Al-Hamra', ar: 'الحمراء' },
+    'al marwah area': { en: 'Al-Marwah', ar: 'المروة' },
+    'al nakheel area': { en: 'Al-Nakheel', ar: 'النخيل' },
+    'al nuzha district': { en: 'Al-Nuzha', ar: 'النزهة' },
+    'al rawdah district': { en: 'Al-Rawdah', ar: 'الروضة' },
+    'al rehab district': { en: 'Al-Rehab', ar: 'الرحاب' },
+    'al salamah area': { en: 'Al-Salama', ar: 'السلامة' },
+    'al shatea district': { en: 'Al-Shati', ar: 'الشاطئ' },
+    'al zahra district': { en: 'Al-Zahra', ar: 'الزهراء' },
+    'al-amal street': { en: 'Al-Amal', ar: 'الأمل' },
+    'industrial zone': { en: 'Industrial Zone', ar: 'المنطقة الصناعية' },
+    'near al khalidiyah mall': { en: 'Al-Khalidiyah', ar: 'الخالدية' },
+};
+
 export default function SearchPage() {
+    const t = getT();
     const [showLocationModal, setShowLocationModal] = useState(false);
     const [selectedCity, setSelectedCity] = useState('');
     const [spaces, setSpaces] = useState<SpaceResult[]>([]);
@@ -59,6 +116,11 @@ export default function SearchPage() {
     const [showLoadMore, setShowLoadMore] = useState(false);
     const lastCardRef = useRef<HTMLElement | null>(null);
     const LIMIT = 12;
+
+    // Arabic translation
+    const { isArabic, translate } = useTranslateToArabic();
+    const [translatedSpaces, setTranslatedSpaces] = useState<SpaceResult[]>([]);
+    const [translatedReviews, setTranslatedReviews] = useState<typeof spaceReviews>([]);
 
     // Reviews state
     const [modalView, setModalView] = useState<'details' | 'reviews'>('details');
@@ -85,6 +147,7 @@ export default function SearchPage() {
 
     const [filters, setFilters] = useState({
         city: '',
+        neighborhood: '',          // separate from city
         sizeRange: '',
         minSize: '',
         maxSize: '',
@@ -117,7 +180,7 @@ export default function SearchPage() {
         } else {
             currentCity = storedCity;
             setSelectedCity(storedCity);
-            setFilters(f => ({ ...f, city: storedCity }));
+            setFilters(f => ({ ...f, city: storedCity, neighborhood: '' }));
         }
 
         // Fetch dynamic price range
@@ -158,10 +221,9 @@ export default function SearchPage() {
         fetch('/api/spaces/neighborhoods')
             .then(res => res.json())
             .then(data => {
-                const fetchedNeighborhoods = data.data?.neighborhoods || data.neighborhoods;
-                if (fetchedNeighborhoods) {
-                    setAvailableNeighborhoods(fetchedNeighborhoods);
-                }
+                // successResponse spreads data directly → { success, neighborhoods: [...] }
+                const fetchedNeighborhoods: string[] = data?.neighborhoods || [];
+                setAvailableNeighborhoods(fetchedNeighborhoods);
             })
             .catch(err => console.error('Error fetching neighborhoods:', err));
 
@@ -171,7 +233,7 @@ export default function SearchPage() {
     function handleCitySelect(city: string) {
         localStorage.setItem('siaa_city', city);
         setSelectedCity(city);
-        setFilters(f => ({ ...f, city }));
+        setFilters(f => ({ ...f, city, neighborhood: '' })); // reset neighborhood when city changes
         setShowLocationModal(false);
     }
 
@@ -198,6 +260,7 @@ export default function SearchPage() {
         const searchSortBy = overrideSortBy !== undefined ? overrideSortBy : filters.sortBy;
 
         if (searchCity) params.set('city', searchCity);
+        if (filters.neighborhood) params.set('neighborhood', filters.neighborhood); // separate param
         if (filters.spaceType) params.set('spaceType', filters.spaceType);
         if (searchMaxPrice !== undefined) params.set('maxPrice', String(searchMaxPrice));
         if (filters.minSize) params.set('minSize', filters.minSize);
@@ -232,6 +295,26 @@ export default function SearchPage() {
             }
             setSpaces(results);
             setHasMore(results.length === LIMIT);
+
+            // Translate dynamic DB fields to Arabic when language is set to Arabic
+            if (isArabic && results.length > 0) {
+                const fields = results.flatMap(s => [
+                    s.Title ?? '',
+                    s.SpaceType ?? '',
+                    s.AddressLine1 ?? '',
+                    s.Neighborhood ?? '',
+                ]);
+                const translated = await translate(fields);
+                setTranslatedSpaces(results.map((s, i) => ({
+                    ...s,
+                    Title: translated[i * 4] || s.Title,
+                    SpaceType: translated[i * 4 + 1] || s.SpaceType,
+                    AddressLine1: translated[i * 4 + 2] || s.AddressLine1,
+                    Neighborhood: translated[i * 4 + 3] || s.Neighborhood,
+                })));
+            } else {
+                setTranslatedSpaces(results);
+            }
         } catch (err) {
             console.error('Search error:', err);
         } finally {
@@ -305,10 +388,30 @@ export default function SearchPage() {
         try {
             const res = await fetch(`/api/spaces/${spaceId}/reviews`);
             const json = await res.json();
-            setSpaceReviews(json.reviews || []);
+            const reviews = json.reviews || [];
+            setSpaceReviews(reviews);
+
+            // Translate review comments and provider responses to Arabic
+            if (isArabic && reviews.length > 0) {
+                const texts = reviews.flatMap((r: { Comment?: string; ProviderResponse?: string }) => [
+                    r.Comment ?? '',
+                    r.ProviderResponse ?? '',
+                ]);
+                const translated = await translate(texts);
+                setTranslatedReviews(reviews.map(
+                    (r: { Comment?: string; ProviderResponse?: string }, i: number) => ({
+                        ...r,
+                        Comment: translated[i * 2] || r.Comment,
+                        ProviderResponse: translated[i * 2 + 1] || r.ProviderResponse,
+                    })
+                ));
+            } else {
+                setTranslatedReviews(reviews);
+            }
         } catch (err) {
             console.error('Failed to fetch reviews:', err);
             setSpaceReviews([]);
+            setTranslatedReviews([]);
         } finally {
             setReviewsLoading(false);
         }
@@ -332,7 +435,7 @@ export default function SearchPage() {
         fetch(`/api/spaces/${space.SpaceID}/images`)
             .then(r => r.json())
             .then(d => { if (d.images) setModalImages(d.images.map((img: { ImageID: number }) => img.ImageID)); })
-            .catch(() => {});
+            .catch(() => { });
         // Pre-fetch reviews
         fetchSpaceReviews(space.SpaceID);
     }
@@ -344,26 +447,26 @@ export default function SearchPage() {
                 <div className="review-modal-overlay" style={{ zIndex: 1000 }}>
                     <div className="review-modal" style={{ maxWidth: '480px', width: '90%' }}>
                         <div className="review-modal-header">
-                            <h3>Welcome to Si&apos;aa! 👋</h3>
+                            <h3>{t.welcomeToSiaa}</h3>
                         </div>
                         <div className="review-modal-body">
-                            <p style={{ marginBottom: '1rem' }}>To show you storage spaces near you, please select your city:</p>
+                            <p style={{ marginBottom: '1rem' }}>{t.selectCityPrompt}</p>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                                 {SAUDI_CITIES.map(city => (
                                     <button
-                                        key={city}
+                                        key={city.en}
                                         className="btn btn-outline"
-                                        onClick={() => handleCitySelect(city)}
+                                        onClick={() => handleCitySelect(city.en)}
                                         style={{ padding: '0.5rem', textAlign: 'center' }}
                                     >
-                                        {city}
+                                        {isArabic ? city.ar : city.en}
                                     </button>
                                 ))}
                             </div>
                         </div>
                         <div className="review-modal-footer">
                             <button className="btn btn-outline" onClick={() => setShowLocationModal(false)}>
-                                Skip for now
+                                {t.skipForNow}
                             </button>
                         </div>
                     </div>
@@ -372,15 +475,18 @@ export default function SearchPage() {
 
             {/* Header */}
             <header className="header">
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                    <LanguageToggle />
+                </div>
                 <div className="container">
                     <div className="header-content">
                         <nav className="nav">
-                            <a href="/dashboard">Dashboard</a>
-                            <a href="/#about">About</a>
-                            <a href="/#features">Features</a>
+                            <a href="/dashboard">{t.dashboard}</a>
+                            <a href="/#about">{t.about}</a>
+                            <a href="/#features">{t.features}</a>
                         </nav>
                         <div className="logo">
-                            <img src="/Media/Logo.png" alt="Si'aa Logo" className="logo-img" />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
                     </div>
                 </div>
@@ -388,17 +494,24 @@ export default function SearchPage() {
 
             <section className="storage-search">
                 <div className="container">
-                    <h1 className="storage-search__title">Find the Right Storage Space</h1>
+                    <h1 className="storage-search__title">{t.findRightStorage}</h1>
                     <p className="storage-search__subtitle">
-                        Filter by size, price, and features to find a storage space that fits your needs.
+                        {t.searchSubtitle}
                         {selectedCity && (
                             <>
-                                <span style={{ color: '#ff6b35' }}> Showing results near <strong>{selectedCity}</strong>.</span>
+                                <span style={{ color: '#ff6b35' }}>
+                                    {' '}{t.showingResultsNear}{' '}
+                                    <strong>
+                                        {isArabic
+                                            ? SAUDI_CITIES.find(c => c.en === selectedCity)?.ar || selectedCity
+                                            : selectedCity}
+                                    </strong>.
+                                </span>
                                 <button
                                     style={{ marginLeft: '0.5rem', background: 'none', border: 'none', cursor: 'pointer', color: '#ff6b35', textDecoration: 'underline' }}
                                     onClick={() => setShowLocationModal(true)}
                                 >
-                                    Change city
+                                    {t.changeCity}
                                 </button>
                             </>
                         )}
@@ -408,48 +521,50 @@ export default function SearchPage() {
                         {/* Left: Filters */}
                         <div className="storage-search__form-area">
                             <div className="filter-card">
-                                <h2 className="filter-card__title">Search Filters</h2>
+                                <h2 className="filter-card__title">{t.searchFilters}</h2>
                                 <form className="filter-form" onSubmit={handleSearch}>
 
                                     <div className="filter-grid">
 
                                         {/* Location / Neighborhood */}
                                         <div className="filter-field">
-                                            <span className="filter-field__label">Location</span>
+                                            <span className="filter-field__label">{t.location}</span>
                                             <select
                                                 name="location_neighborhood"
                                                 className="filter-select-input"
-                                                value={filters.city}
-                                                onChange={e => setFilters(f => ({ ...f, city: e.target.value }))}
+                                                value={filters.neighborhood}
+                                                onChange={e => setFilters(f => ({ ...f, neighborhood: e.target.value }))}
                                             >
-                                                <option value="">Any neighborhood</option>
-                                                {availableNeighborhoods.map(neighborhood => (
-                                                    <option key={neighborhood} value={neighborhood}>{neighborhood}</option>
-                                                ))}
+                                                <option value="">{t.anyNeighborhood}</option>
+                                                {availableNeighborhoods.map(n => {
+                                                    const entry = NEIGHBORHOOD_LABEL[n.toLowerCase()];
+                                                    const label = entry ? (isArabic ? entry.ar : entry.en) : n;
+                                                    return <option key={n} value={n}>{label}</option>;
+                                                })}
                                             </select>
                                         </div>
 
                                         {/* Space Size */}
                                         <div className="filter-field">
-                                            <span className="filter-field__label">Space Size (m²)</span>
+                                            <span className="filter-field__label">{t.spaceSizeM2}</span>
                                             <select
                                                 name="storage_size"
                                                 className="filter-select-input"
                                                 value={filters.sizeRange}
                                                 onChange={e => handleSizeChange(e.target.value)}
                                             >
-                                                <option value="">Any size</option>
-                                                <option value="small">Small (1–3 m²)</option>
-                                                <option value="medium">Medium (4–7 m²)</option>
-                                                <option value="large">Large (8–12 m²)</option>
-                                                <option value="xl">Extra Large (&gt;12 m²)</option>
+                                                <option value="">{t.anySize}</option>
+                                                <option value="small">{t.sizeSmall}</option>
+                                                <option value="medium">{t.sizeMedium}</option>
+                                                <option value="large">{t.sizeLarge}</option>
+                                                <option value="xl">{t.sizeXL}</option>
                                             </select>
                                         </div>
 
                                         {/* Price Range */}
                                         <div className="filter-field filter-field--range">
                                             <div className="filter-field__range-header">
-                                                <span className="filter-field__label">Price Range</span>
+                                                <span className="filter-field__label">{t.priceRange}</span>
                                                 <span className="filter-field__range-values">
                                                     {priceRangeLoading ? (
                                                         <span>- - -</span>
@@ -472,7 +587,7 @@ export default function SearchPage() {
 
                                         {/* Start Date */}
                                         <div className="filter-field filter-field--date">
-                                            <span className="filter-field__label">Start Date</span>
+                                            <span className="filter-field__label">{t.startDate}</span>
                                             <input
                                                 type="date"
                                                 name="rental_date"
@@ -484,94 +599,94 @@ export default function SearchPage() {
 
                                         {/* Space Type */}
                                         <div className="filter-field">
-                                            <span className="filter-field__label">Space Type</span>
+                                            <span className="filter-field__label">{t.spaceType}</span>
                                             <select
                                                 name="space_type"
                                                 className="filter-select-input"
                                                 value={filters.spaceType}
                                                 onChange={e => setFilters(f => ({ ...f, spaceType: e.target.value }))}
                                             >
-                                                <option value="">Any type</option>
-                                                <option value="room">Indoor room</option>
-                                                <option value="garage">Garage / parking</option>
-                                                <option value="warehouse">Warehouse corner</option>
-                                                <option value="outdoor">Outdoor covered area</option>
-                                                <option value="Basement">Basement</option>
+                                                <option value="">{t.any}</option>
+                                                <option value="room">{t.spaceTypeRoom}</option>
+                                                <option value="garage">{t.spaceTypeGarage}</option>
+                                                <option value="warehouse">{t.spaceTypeWarehouse}</option>
+                                                <option value="outdoor">{t.spaceTypeOutdoor}</option>
+                                                <option value="Basement">{t.spaceTypeBasement}</option>
                                             </select>
                                         </div>
 
                                         {/* Rental Duration */}
                                         <div className="filter-field">
-                                            <span className="filter-field__label">Rental Duration</span>
+                                            <span className="filter-field__label">{t.rentalDurationLabel}</span>
                                             <select
                                                 name="rental_duration"
                                                 className="filter-select-input"
                                                 value={filters.rentalDuration}
                                                 onChange={e => setFilters(f => ({ ...f, rentalDuration: e.target.value }))}
                                             >
-                                                <option value="">Any</option>
-                                                <option value="daily">Daily</option>
-                                                <option value="weekly">Weekly</option>
-                                                <option value="monthly">Monthly</option>
+                                                <option value="">{t.any}</option>
+                                                <option value="daily">{t.daily}</option>
+                                                <option value="weekly">{t.weekly}</option>
+                                                <option value="monthly">{t.monthly}</option>
                                             </select>
                                         </div>
 
                                     </div>
 
-                                    {/* Environment / Features — all 8 from original */}
+                                    {/* Environment / Features */}
                                     <div className="environment-options">
                                         <label className="environment-option">
                                             <input type="checkbox" name="environment[]" value="climate"
                                                 checked={filters.climateControlled}
                                                 onChange={e => setFilters(f => ({ ...f, climateControlled: e.target.checked }))} />
-                                            <span>Climate-controlled</span>
+                                            <span>{t.climateControlled}</span>
                                         </label>
                                         <label className="environment-option">
                                             <input type="checkbox" name="environment[]" value="temperature"
                                                 checked={filters.temperatureControlled}
                                                 onChange={e => setFilters(f => ({ ...f, temperatureControlled: e.target.checked }))} />
-                                            <span>Temperature-controlled</span>
+                                            <span>{t.temperatureControlled}</span>
                                         </label>
                                         <label className="environment-option">
                                             <input type="checkbox" name="environment[]" value="humidity"
                                                 checked={filters.humidityControlled}
                                                 onChange={e => setFilters(f => ({ ...f, humidityControlled: e.target.checked }))} />
-                                            <span>Humidity-controlled</span>
+                                            <span>{t.humidityControlled}</span>
                                         </label>
                                         <label className="environment-option">
                                             <input type="checkbox" name="environment[]" value="dry"
                                                 checked={filters.dry}
                                                 onChange={e => setFilters(f => ({ ...f, dry: e.target.checked }))} />
-                                            <span>Dry</span>
+                                            <span>{t.dryLabel}</span>
                                         </label>
                                         <label className="environment-option">
                                             <input type="checkbox" name="environment[]" value="secure"
                                                 checked={filters.security}
                                                 onChange={e => setFilters(f => ({ ...f, security: e.target.checked }))} />
-                                            <span>Secure (security / CCTV)</span>
+                                            <span>{t.secureWithCctv}</span>
                                         </label>
                                         <label className="environment-option">
                                             <input type="checkbox" name="environment[]" value="parking"
                                                 checked={filters.parking}
                                                 onChange={e => setFilters(f => ({ ...f, parking: e.target.checked }))} />
-                                            <span>Parking available</span>
+                                            <span>{t.parkingAvailableLabel}</span>
                                         </label>
                                         <label className="environment-option">
                                             <input type="checkbox" name="environment[]" value="loading"
                                                 checked={filters.loadingAssistance}
                                                 onChange={e => setFilters(f => ({ ...f, loadingAssistance: e.target.checked }))} />
-                                            <span>Loading assistance</span>
+                                            <span>{t.loadingAssistanceLabel}</span>
                                         </label>
                                         <label className="environment-option">
                                             <input type="checkbox" name="environment[]" value="access24"
                                                 checked={filters.access24}
                                                 onChange={e => setFilters(f => ({ ...f, access24: e.target.checked }))} />
-                                            <span>24/7 access</span>
+                                            <span>{t.access247}</span>
                                         </label>
                                     </div>
 
                                     <button type="submit" className="btn btn-dark btn-large filter-submit-btn">
-                                        {loading ? 'Searching...' : 'Search Spaces'}
+                                        {loading ? t.searching : t.searchSpaces}
                                     </button>
 
                                 </form>
@@ -581,9 +696,9 @@ export default function SearchPage() {
                         {/* Right: Results */}
                         <aside className="storage-results">
                             <div className="storage-results__header">
-                                <h2 className="storage-results__title">Results {hasSearched && `(${totalSearchCount})`}</h2>
+                                <h2 className="storage-results__title">{t.resultsLabel} {hasSearched && `(${totalSearchCount})`}</h2>
                                 <div className="sorting-control">
-                                    <label htmlFor="sortBy" className="sorting-control__label">Sort by</label>
+                                    <label htmlFor="sortBy" className="sorting-control__label">{t.sortByLabel}</label>
                                     <select
                                         id="sortBy"
                                         className="sorting-control__select"
@@ -594,10 +709,10 @@ export default function SearchPage() {
                                             performSearch(undefined, undefined, undefined, newSort);
                                         }}
                                     >
-                                        <option value="match">Match Score (Highest)</option>
-                                        <option value="priceLow">Price (Lowest first)</option>
-                                        <option value="priceHigh">Price (Highest first)</option>
-                                        <option value="distance">Distance (Closest)</option>
+                                        <option value="match">{t.sortMatch}</option>
+                                        <option value="priceLow">{t.sortPriceLow}</option>
+                                        <option value="priceHigh">{t.sortPriceHigh}</option>
+                                        <option value="distance">{t.sortDistance}</option>
                                     </select>
                                 </div>
                             </div>
@@ -612,15 +727,15 @@ export default function SearchPage() {
                                 )}
                                 {!loading && hasSearched && spaces.length === 0 && (
                                     <article className="storage-card" style={{ padding: '2rem', textAlign: 'center' }}>
-                                        <p style={{ fontSize: '14px', color: '#718096' }}>no spaces available, try different values</p>
+                                        <p style={{ fontSize: '14px', color: '#718096' }}>{t.noSpacesAvailable}</p>
                                     </article>
                                 )}
                                 {!loading && !hasSearched && (
                                     <article className="storage-card" style={{ padding: '2rem', textAlign: 'center' }}>
-                                        <p>Use the filters on the left to search for storage spaces.</p>
+                                        <p>{t.useFilterPrompt}</p>
                                     </article>
                                 )}
-                                {!loading && spaces.map((space, index) => (
+                                {!loading && (isArabic ? translatedSpaces : spaces).map((space, index) => (
                                     <article
                                         className="storage-card is-visible"
                                         key={space.SpaceID}
@@ -678,9 +793,9 @@ export default function SearchPage() {
                                             </div>
 
                                             <div className="space-card-tags" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                                                {space.ClimateControlled && <span className="space-tag" style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', background: '#fff5f0', color: '#ff6b35', border: '1px solid #ffd5c2' }}>🌡️ Climate</span>}
-                                                {space.SecuritySystem && <span className="space-tag" style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', background: '#fff5f0', color: '#ff6b35', border: '1px solid #ffd5c2' }}>🔒 Secure</span>}
-                                                {space.ParkingAvailable && <span className="space-tag" style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', background: '#fff5f0', color: '#ff6b35', border: '1px solid #ffd5c2' }}>🚗 Parking</span>}
+                                                {space.ClimateControlled && <span className="space-tag" style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', background: '#fff5f0', color: '#ff6b35', border: '1px solid #ffd5c2' }}>🌡️ {t.climateControlledTag}</span>}
+                                                {space.SecuritySystem && <span className="space-tag" style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', background: '#fff5f0', color: '#ff6b35', border: '1px solid #ffd5c2' }}>🔒 {t.secureAccessTag}</span>}
+                                                {space.ParkingAvailable && <span className="space-tag" style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', background: '#fff5f0', color: '#ff6b35', border: '1px solid #ffd5c2' }}>🚗 {t.parkingAvailableTag}</span>}
                                             </div>
 
                                             <div className="space-card-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '10px', borderTop: '1px solid #f7fafc' }}>
@@ -689,7 +804,7 @@ export default function SearchPage() {
                                                     style={{ padding: '6px 14px', fontSize: '13px', fontWeight: 600, borderRadius: '6px', background: '#f8fafc', color: '#4a5568', border: '1px solid #e2e8f0', cursor: 'pointer' }}
                                                     onClick={(e) => { e.stopPropagation(); openDetailsModal(space); }}
                                                 >
-                                                    View Details
+                                                    {t.viewDetails}
                                                 </button>
                                                 <a
                                                     href={`/booking?spaceId=${space.SpaceID}`}
@@ -697,7 +812,7 @@ export default function SearchPage() {
                                                     style={{ padding: '6px 14px', fontSize: '13px', fontWeight: 600, borderRadius: '6px', textDecoration: 'none', background: 'linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)', color: '#fff' }}
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    Book
+                                                    {t.book}
                                                 </a>
                                             </div>
                                         </div>
@@ -724,9 +839,9 @@ export default function SearchPage() {
                                             }}
                                         >
                                             {loadingMore ? (
-                                                <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>Loading...</>
+                                                <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>{t.loadingText || 'Loading...'}</>
                                             ) : (
-                                                <><i className="fa-solid fa-chevron-down" style={{ marginRight: '8px' }}></i>Load More Spaces</>
+                                                <><i className="fa-solid fa-chevron-down" style={{ marginRight: '8px' }}></i>{t.loadMoreSpaces}</>
                                             )}
                                         </button>
                                     </div>
@@ -791,19 +906,19 @@ export default function SearchPage() {
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                                             {modalSpace.SpaceType && (
                                                 <div>
-                                                    <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</span>
+                                                    <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.spaceType}</span>
                                                     <div style={{ fontSize: '15px', color: '#1a365d', fontWeight: 600 }}><i className="fa-solid fa-box" style={{ color: '#a0aec0', marginRight: '6px' }}></i>{modalSpace.SpaceType}</div>
                                                 </div>
                                             )}
                                             {modalSpace.Size && (
                                                 <div>
-                                                    <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Size</span>
+                                                    <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.sizeLabel}</span>
                                                     <div style={{ fontSize: '15px', color: '#1a365d', fontWeight: 600 }}><i className="fa-solid fa-ruler-combined" style={{ color: '#a0aec0', marginRight: '6px' }}></i>{modalSpace.Size} m²</div>
                                                 </div>
                                             )}
                                             {modalSpace.AvgRating !== undefined && (
                                                 <div>
-                                                    <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rating</span>
+                                                    <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.rating}</span>
                                                     <div
                                                         onClick={() => handleRatingClick(modalSpace.SpaceID)}
                                                         style={{ fontSize: '15px', color: '#1a365d', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textDecorationColor: '#f59e0b', textUnderlineOffset: '3px' }}
@@ -814,35 +929,35 @@ export default function SearchPage() {
                                             )}
                                             {modalSpace.MatchScore && (
                                                 <div>
-                                                    <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Match</span>
+                                                    <span style={{ fontSize: '12px', color: '#718096', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.matchLabel}</span>
                                                     <div style={{ fontSize: '15px', color: '#e8750a', fontWeight: 800 }}><i className="fa-solid fa-bolt" style={{ marginRight: '6px' }}></i>{modalSpace.MatchScore}%</div>
                                                 </div>
                                             )}
                                         </div>
 
                                         <div style={{ marginBottom: '24px' }}>
-                                            <span style={{ fontSize: '13px', color: '#4a5568', fontWeight: 700, display: 'block', marginBottom: '10px' }}>Included Amenities</span>
+                                            <span style={{ fontSize: '13px', color: '#4a5568', fontWeight: 700, display: 'block', marginBottom: '10px' }}>{t.includedAmenities}</span>
                                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                                {modalSpace.ClimateControlled && <span style={{ background: '#fff5f0', color: '#ff6b35', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: '1px solid #ffd5c2', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="fa-solid fa-snowflake"></i> Climate Controlled</span>}
-                                                {modalSpace.SecuritySystem && <span style={{ background: '#fff5f0', color: '#ff6b35', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: '1px solid #ffd5c2', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="fa-solid fa-shield-halved"></i> Secure Access</span>}
-                                                {modalSpace.ParkingAvailable && <span style={{ background: '#fff5f0', color: '#ff6b35', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: '1px solid #ffd5c2', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="fa-solid fa-car"></i> Parking Available</span>}
-                                                {!modalSpace.ClimateControlled && !modalSpace.SecuritySystem && !modalSpace.ParkingAvailable && <span style={{ color: '#a0aec0', fontSize: '14px', fontStyle: 'italic' }}>Basic Storage Space</span>}
+                                                {modalSpace.ClimateControlled && <span style={{ background: '#fff5f0', color: '#ff6b35', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: '1px solid #ffd5c2', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="fa-solid fa-snowflake"></i> {t.climateControlledTag}</span>}
+                                                {modalSpace.SecuritySystem && <span style={{ background: '#fff5f0', color: '#ff6b35', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: '1px solid #ffd5c2', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="fa-solid fa-shield-halved"></i> {t.secureAccessTag}</span>}
+                                                {modalSpace.ParkingAvailable && <span style={{ background: '#fff5f0', color: '#ff6b35', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: '1px solid #ffd5c2', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="fa-solid fa-car"></i> {t.parkingAvailableTag}</span>}
+                                                {!modalSpace.ClimateControlled && !modalSpace.SecuritySystem && !modalSpace.ParkingAvailable && <span style={{ color: '#a0aec0', fontSize: '14px', fontStyle: 'italic' }}>{t.basicStorage}</span>}
                                             </div>
                                         </div>
 
                                         {/* Compact Pricing Breakdown */}
                                         <div style={{ display: 'flex', gap: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '12px', paddingBottom: '8px', marginTop: 'auto' }}>
                                             <div style={{ flex: '1', textAlign: 'center', borderRight: '1px solid #e2e8f0', paddingRight: '16px' }}>
-                                                <div style={{ fontSize: '11px', color: '#718096', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>Per Day</div>
-                                                <div style={{ fontSize: '16px', fontWeight: 800, color: '#ff6b35' }}>{modalSpace.PricePerDay || Math.round((modalSpace.PricePerMonth || 0) / 30)} <span style={{ fontSize: '12px', fontWeight: 600, color: '#a0aec0' }}>SAR</span></div>
+                                                <div style={{ fontSize: '11px', color: '#718096', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>{t.perDay}</div>
+                                                <div style={{ fontSize: '16px', fontWeight: 800, color: '#ff6b35' }}>{modalSpace.PricePerDay || Math.round((modalSpace.PricePerMonth || 0) / 30)} <span style={{ fontSize: '12px', fontWeight: 600, color: '#a0aec0' }}>{t.sar}</span></div>
                                             </div>
                                             <div style={{ flex: '1', textAlign: 'center', borderRight: '1px solid #e2e8f0', paddingRight: '16px' }}>
-                                                <div style={{ fontSize: '11px', color: '#718096', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>Per Week</div>
-                                                <div style={{ fontSize: '16px', fontWeight: 800, color: '#ff6b35' }}>{modalSpace.PricePerWeek || Math.round((modalSpace.PricePerMonth || 0) / 4)} <span style={{ fontSize: '12px', fontWeight: 600, color: '#a0aec0' }}>SAR</span></div>
+                                                <div style={{ fontSize: '11px', color: '#718096', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>{t.perWeek}</div>
+                                                <div style={{ fontSize: '16px', fontWeight: 800, color: '#ff6b35' }}>{modalSpace.PricePerWeek || Math.round((modalSpace.PricePerMonth || 0) / 4)} <span style={{ fontSize: '12px', fontWeight: 600, color: '#a0aec0' }}>{t.sar}</span></div>
                                             </div>
                                             <div style={{ flex: '1', textAlign: 'center' }}>
-                                                <div style={{ fontSize: '11px', color: '#718096', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>Per Month</div>
-                                                <div style={{ fontSize: '16px', fontWeight: 800, color: '#ff6b35' }}>{modalSpace.PricePerMonth || '?'} <span style={{ fontSize: '12px', fontWeight: 600, color: '#a0aec0' }}>SAR</span></div>
+                                                <div style={{ fontSize: '11px', color: '#718096', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>{t.perMonth}</div>
+                                                <div style={{ fontSize: '16px', fontWeight: 800, color: '#ff6b35' }}>{modalSpace.PricePerMonth || '?'} <span style={{ fontSize: '12px', fontWeight: 600, color: '#a0aec0' }}>{t.sar}</span></div>
                                             </div>
                                         </div>
                                     </>
@@ -856,22 +971,22 @@ export default function SearchPage() {
                                             onClick={() => setModalView('details')}
                                             style={{ background: 'none', border: 'none', padding: '0', color: '#ff6b35', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start' }}
                                         >
-                                            <i className="fa-solid fa-arrow-left" style={{ fontSize: '11px' }}></i> Back to Details
+                                            <i className="fa-solid fa-arrow-left" style={{ fontSize: '11px' }}></i> {t.backToDetails}
                                         </button>
 
                                         <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1a365d', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            Reviews
+                                            {t.reviewsLabel}
                                             {modalSpace.TotalReviews !== undefined && <span style={{ fontSize: '13px', fontWeight: 400, color: '#718096' }}>({modalSpace.TotalReviews})</span>}
                                         </h3>
 
                                         {/* Reviews list */}
                                         {reviewsLoading ? (
-                                            <div style={{ textAlign: 'center', padding: '24px', color: '#718096' }}><i className="fa-solid fa-spinner fa-spin"></i> Loading reviews...</div>
-                                        ) : spaceReviews.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '24px', color: '#a0aec0', fontStyle: 'italic' }}>No reviews yet. Be the first to leave a review!</div>
+                                            <div style={{ textAlign: 'center', padding: '24px', color: '#718096' }}><i className="fa-solid fa-spinner fa-spin"></i> {t.loadingReviews}</div>
+                                        ) : (isArabic ? translatedReviews : spaceReviews).length === 0 ? (
+                                            <div style={{ textAlign: 'center', padding: '24px', color: '#a0aec0', fontStyle: 'italic' }}>{t.noReviewsYet}</div>
                                         ) : (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                {spaceReviews.map(review => (
+                                                {(isArabic ? translatedReviews : spaceReviews).map(review => (
                                                     <div key={review.ReviewID} style={{ padding: '14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                                                         {/* Review header: avatar, name, stars, time */}
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -901,7 +1016,7 @@ export default function SearchPage() {
                                                         {review.ProviderResponse && (
                                                             <div style={{ margin: '10px 0 0 48px', padding: '10px 14px', background: '#fff', borderRadius: '8px', borderLeft: '3px solid #ff6b35' }}>
                                                                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#ff6b35', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                    <i className="fa-solid fa-reply" style={{ fontSize: '10px' }}></i> Provider Response
+                                                                    <i className="fa-solid fa-reply" style={{ fontSize: '10px' }}></i> {t.providerResponseLabel}
                                                                     {review.ProviderResponseDate && <span style={{ fontWeight: 400, color: '#a0aec0' }}>· {timeAgo(review.ProviderResponseDate)}</span>}
                                                                 </div>
                                                                 <p style={{ margin: 0, fontSize: '13px', color: '#4a5568', lineHeight: 1.4 }}>{review.ProviderResponse}</p>
@@ -914,7 +1029,7 @@ export default function SearchPage() {
 
                                         {/* Submit a review */}
                                         <div style={{ marginTop: '8px', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                            <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#1a365d', margin: '0 0 12px 0' }}>Leave a Review</h4>
+                                            <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#1a365d', margin: '0 0 12px 0' }}>{t.leaveAReview}</h4>
                                             {/* Star rating input */}
                                             <div style={{ display: 'flex', gap: '4px', marginBottom: '12px', fontSize: '24px' }}>
                                                 {Array.from({ length: 5 }).map((_, i) => (
@@ -932,7 +1047,7 @@ export default function SearchPage() {
                                             <textarea
                                                 value={newComment}
                                                 onChange={e => setNewComment(e.target.value)}
-                                                placeholder="Share your experience with this storage space..."
+                                                placeholder={t.reviewPlaceholder}
                                                 style={{ width: '100%', minHeight: '80px', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', fontFamily: 'inherit', resize: 'vertical', outline: 'none', transition: 'border-color 0.2s ease', boxSizing: 'border-box' }}
                                                 onFocus={e => { e.currentTarget.style.borderColor = '#ff6b35'; }}
                                                 onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; }}
@@ -945,7 +1060,7 @@ export default function SearchPage() {
                                                     setSubmitReviewLoading(true);
                                                     try {
                                                         const token = localStorage.getItem('siaa_token');
-                                                        if (!token) { setReviewError('Please log in to submit a review.'); return; }
+                                                        if (!token) { setReviewError(t.pleaseLogInToReview); return; }
                                                         const payload = JSON.parse(atob(token.split('.')[1]));
                                                         const seekerId = payload.userId;
                                                         // We need a bookingId — find from seeker's bookings for this space
@@ -953,7 +1068,7 @@ export default function SearchPage() {
                                                         const bJson = await bRes.json();
                                                         const bookings = bJson.bookings || bJson.data?.bookings || [];
                                                         const booking = bookings.find((b: { SpaceID: number; BookingStatus: string; HasReview?: boolean }) => b.SpaceID === modalSpace.SpaceID && b.BookingStatus === 'Completed' && !b.HasReview);
-                                                        if (!booking) { setReviewError('You need a completed booking for this space to leave a review.'); return; }
+                                                        if (!booking) { setReviewError(t.completedBookingRequired); return; }
                                                         const rRes = await fetch(`/api/bookings/${booking.BookingID}/review`, {
                                                             method: 'POST',
                                                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -961,7 +1076,7 @@ export default function SearchPage() {
                                                         });
                                                         if (!rRes.ok) {
                                                             const errData = await rRes.json();
-                                                            setReviewError(errData.error || 'Failed to submit review.');
+                                                            setReviewError(errData.error || t.anErrorOccurred);
                                                             return;
                                                         }
                                                         // Refresh reviews
@@ -970,7 +1085,7 @@ export default function SearchPage() {
                                                         fetchSpaceReviews(modalSpace.SpaceID);
                                                     } catch (err) {
                                                         console.error(err);
-                                                        setReviewError('An error occurred. Please try again.');
+                                                        setReviewError(t.anErrorOccurred);
                                                     } finally {
                                                         setSubmitReviewLoading(false);
                                                     }
@@ -989,7 +1104,7 @@ export default function SearchPage() {
                                                     transition: 'all 0.2s ease',
                                                 }}
                                             >
-                                                {submitReviewLoading ? <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>Submitting...</> : 'Submit Review'}
+                                                {submitReviewLoading ? <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>{t.submitting}</> : t.submitReviewBtn}
                                             </button>
                                         </div>
                                     </div>
@@ -1000,20 +1115,20 @@ export default function SearchPage() {
                         {/* Bottom Footer: Total Price & Actions */}
                         <div style={{ padding: '20px 24px', background: '#fafbfc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: '13px', color: '#718096', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Price</span>
+                                <span style={{ fontSize: '13px', color: '#718096', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.totalPrice}</span>
                                 <div>
                                     <span style={{ fontSize: '24px', fontWeight: 900, color: '#ff6b35' }}>{modalSpace.PricePerMonth || '?'}</span>
-                                    <span style={{ fontSize: '15px', fontWeight: 700, color: '#a0aec0', marginLeft: '4px' }}>SAR / mo</span>
+                                    <span style={{ fontSize: '15px', fontWeight: 700, color: '#a0aec0', marginLeft: '4px' }}>{t.sarPerMonthLong}</span>
                                 </div>
                             </div>
 
                             <div style={{ display: 'flex', gap: '12px' }}>
-                                <button style={{ padding: '12px 24px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 700, fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setModalSpace(null)}>Cancel</button>
+                                <button style={{ padding: '12px 24px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 700, fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setModalSpace(null)}>{t.cancel}</button>
                                 <button style={{ padding: '12px 24px', borderRadius: '10px', background: '#4a5568', color: '#fff', fontWeight: 700, fontSize: '15px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setShow3DVisualizer(true)}>
-                                    <img src="/Media/SpaceVisualization.png" alt="Visualize Space" style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)' }} /> Visualize Space
+                                    <img src="/Media/SpaceVisualization.png" alt={t.visualizeSpace} style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)' }} /> {t.visualizeSpace}
                                 </button>
                                 <a href={`/booking?spaceId=${modalSpace.SpaceID}`} style={{ padding: '12px 32px', borderRadius: '10px', background: 'linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)', color: '#fff', fontWeight: 700, fontSize: '16px', textDecoration: 'none', display: 'inline-block', boxShadow: '0 4px 12px rgba(255,107,53,0.3)', transition: 'all 0.2s ease', border: 'none', cursor: 'pointer' }}>
-                                    Book Space Now
+                                    {t.bookSpaceNow}
                                 </a>
                             </div>
                         </div>
@@ -1023,12 +1138,12 @@ export default function SearchPage() {
             )}
 
             {show3DVisualizer && modalSpace && (
-                <Space3DVisualizer 
-                    spaceWidth={modalSpace.Width || Math.sqrt(modalSpace.Size || 9)} 
-                    spaceLength={modalSpace.Length || Math.sqrt(modalSpace.Size || 9)} 
-                    spaceHeight={modalSpace.Height || 2.5} 
+                <Space3DVisualizer
+                    spaceWidth={modalSpace.Width || Math.sqrt(modalSpace.Size || 9)}
+                    spaceLength={modalSpace.Length || Math.sqrt(modalSpace.Size || 9)}
+                    spaceHeight={modalSpace.Height || 2.5}
                     imageUrl={modalSpace.FirstImageID ? `/api/images/space/${modalSpace.FirstImageID}` : undefined}
-                    onClose={() => setShow3DVisualizer(false)} 
+                    onClose={() => setShow3DVisualizer(false)}
                 />
             )}
 

@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
 
         const filters: SpaceSearchFilters = {
             city: searchParams.get('city') || undefined,
+            neighborhood: searchParams.get('neighborhood') || undefined,
             spaceType: searchParams.get('spaceType') || searchParams.get('space_type') || undefined,
             maxPrice: searchParams.has('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined,
             minPrice: searchParams.has('minPrice') ? parseFloat(searchParams.get('minPrice')!) : undefined,
