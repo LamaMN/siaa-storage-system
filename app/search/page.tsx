@@ -46,6 +46,8 @@ interface SpaceResult {
     ParkingAvailable?: boolean;
     MatchScore?: number;
     FirstImageID?: number;
+    FavoriteCount?: number;
+    IsFavorited?: boolean;
 }
 
 // City names in English (used as DB keys) + Arabic display names
@@ -116,6 +118,10 @@ export default function SearchPage() {
     const [showLoadMore, setShowLoadMore] = useState(false);
     const lastCardRef = useRef<HTMLElement | null>(null);
     const LIMIT = 12;
+
+    const [showFavorites, setShowFavorites] = useState(false);
+    const [favorites, setFavorites] = useState<SpaceResult[]>([]);
+    const [favoritesLoading, setFavoritesLoading] = useState(false);
 
     // Arabic translation
     const { isArabic, translate } = useTranslateToArabic();
@@ -230,6 +236,17 @@ export default function SearchPage() {
         return () => window.removeEventListener('openSpaceModal', handleOpenModal);
     }, []);
 
+    useEffect(() => {
+    const savedSpaceId = sessionStorage.getItem('openSpaceId');
+    if (!savedSpaceId || spaces.length === 0) return;
+
+    const space = spaces.find(s => s.SpaceID === Number(savedSpaceId));
+    if (space) {
+        sessionStorage.removeItem('openSpaceId');
+        openDetailsModal(space);
+    }
+    }, [spaces]);
+
     function handleCitySelect(city: string) {
         localStorage.setItem('siaa_city', city);
         setSelectedCity(city);
@@ -286,14 +303,18 @@ export default function SearchPage() {
         const params = buildSearchParams(overrideCity, overrideMaxPrice, overrideSortBy, 1);
 
         try {
-            const res = await fetch(`/api/spaces?${params.toString()}`);
+            const token = localStorage.getItem('siaaToken');
+
+            const res = await fetch(`/api/spaces?${params.toString()}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
             const json = await res.json();
             const data = json.data || json; // Handle both cases based on API style
             const results: SpaceResult[] = data.spaces || [];
             if (data.totalCount !== undefined) {
                 setTotalSearchCount(data.totalCount);
             }
-            setSpaces(results);
+            setSpaces(results.map(normalizeSpace));
             setHasMore(results.length === LIMIT);
 
             // Translate dynamic DB fields to Arabic when language is set to Arabic
@@ -313,7 +334,7 @@ export default function SearchPage() {
                     Neighborhood: translated[i * 4 + 3] || s.Neighborhood,
                 })));
             } else {
-                setTranslatedSpaces(results);
+                setTranslatedSpaces(results.map(normalizeSpace));
             }
         } catch (err) {
             console.error('Search error:', err);
@@ -328,7 +349,11 @@ export default function SearchPage() {
         const params = buildSearchParams(undefined, undefined, undefined, nextPage);
 
         try {
-            const res = await fetch(`/api/spaces?${params.toString()}`);
+            const token = localStorage.getItem('siaaToken');
+
+            const res = await fetch(`/api/spaces?${params.toString()}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
             const json = await res.json();
             const data = json.data || json;
             const results: SpaceResult[] = data.spaces || [];
@@ -439,6 +464,89 @@ export default function SearchPage() {
         // Pre-fetch reviews
         fetchSpaceReviews(space.SpaceID);
     }
+    
+    function normalizeSpace(space: SpaceResult): SpaceResult {
+    return {
+        ...space,
+        FavoriteCount: Number(space.FavoriteCount || 0),
+        IsFavorited: space.IsFavorited === true || Number(space.IsFavorited) === 1,
+    };
+    }
+
+        async function fetchFavorites() {
+        const token = localStorage.getItem('siaaToken');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        setFavoritesLoading(true);
+
+        try {
+            const res = await fetch('/api/favorites', {
+            headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const json = await res.json();
+            const data = json.data || json;
+
+            setFavorites((data.favorites || []).map(normalizeSpace));
+            setShowFavorites(true);
+        } finally {
+            setFavoritesLoading(false);
+        }
+        }
+
+        async function toggleFavorite(spaceId: number, isLiked?: boolean) {
+        const token = localStorage.getItem('siaaToken');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const res = await fetch(`/api/spaces/${spaceId}/favorite`, {
+            method: isLiked ? 'DELETE' : 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const json = await res.json();
+        const data = json.data || json;
+
+        if (!res.ok) {
+            alert(json.error || 'Failed to update favorite');
+            return;
+        }
+
+        const updatedCount = Number(data.FavoriteCount || 0);
+
+        setSpaces(prev =>
+            prev.map(space =>
+            space.SpaceID === spaceId
+                ? { ...space, IsFavorited: data.IsFavorited, FavoriteCount: updatedCount }
+                : space
+            )
+        );
+
+        setTranslatedSpaces(prev =>
+            prev.map(space =>
+            space.SpaceID === spaceId
+                ? { ...space, IsFavorited: data.IsFavorited, FavoriteCount: updatedCount }
+                : space
+            )
+        );
+
+        setFavorites(prev =>
+            data.IsFavorited
+            ? prev
+            : prev.filter(space => space.SpaceID !== spaceId)
+        );
+
+        setModalSpace(prev =>
+            prev && prev.SpaceID === spaceId
+            ? { ...prev, IsFavorited: data.IsFavorited, FavoriteCount: updatedCount }
+            : prev
+        );
+        }
 
     return (
         <>
@@ -475,19 +583,33 @@ export default function SearchPage() {
 
             {/* Header */}
             <header className="header">
-                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
-                    <LanguageToggle />
-                </div>
                 <div className="container">
                     <div className="header-content">
+                        <div className="logo">
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
+                        </div>
                         <nav className="nav">
                             <a href="/dashboard">{t.dashboard}</a>
                             <a href="/#about">{t.about}</a>
                             <a href="/#features">{t.features}</a>
                         </nav>
-                        <div className="logo">
-                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '6px 20px' }}>
+                            <button
+                                onClick={fetchFavorites}
+                                style={{
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                color: '#ff6b35',
+                                fontSize: '20px',
+                                }}
+                                title="Favorites"
+                            >
+                                <i className="fa-solid fa-heart"></i>
+                            </button>
+                            <LanguageToggle />
                         </div>
+                        
                     </div>
                 </div>
             </header>
@@ -774,7 +896,56 @@ export default function SearchPage() {
                                                     <span className="price-unit" style={{ fontSize: '11px', color: '#a0aec0' }}>/ mo</span>
                                                 </div>
                                             </div>
+                                            <div
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginTop: '6px',
+                                            }}
+                                            >
+                                            {/* Likes count */}
+                                            <div
+                                                style={{
+                                                fontSize: '12px',
+                                                color: '#4a5568',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                }}
+                                            >
+                                                <i
+                                                className="fa-solid fa-heart"
+                                                style={{ color: '#ff6b35', fontSize: '11px' }}
+                                                ></i>
+                                                {Number(space.FavoriteCount || 0)}
+                                            </div>
 
+                                            {/* Like button */}
+                                            <button
+                                                className="btn btn-outline"
+                                                style={{
+                                                padding: '5px 10px',
+                                                fontSize: '12px',
+                                                borderRadius: '999px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                }}
+                                                onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleFavorite(space.SpaceID, space.IsFavorited);
+                                                }}
+                                            >
+                                                <i
+                                                className={space.IsFavorited ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}
+                                                style={{
+                                                    color: space.IsFavorited ? '#ff6b35' : '#ff6b35',
+                                                }}
+                                                ></i>
+                                            </button>
+                                            </div>
                                             <div className="space-card-meta" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
                                                 <div className="space-meta-item" style={{ fontSize: '12px', color: '#4a5568', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                     <i className="fa-solid fa-star" style={{ color: '#ff6b35', fontSize: '10px' }}></i>
@@ -895,9 +1066,26 @@ export default function SearchPage() {
                                         <p style={{ color: '#4a5568', margin: '0', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <i className="fa-solid fa-location-dot" style={{ color: '#ff6b35' }}></i>
                                             {modalSpace.City}{modalSpace.AddressLine1 ? `, ${modalSpace.AddressLine1}` : ''}
+                                            <button
+                                            onClick={() => toggleFavorite(modalSpace.SpaceID, modalSpace.IsFavorited)}
+                                            style={{
+                                                border: '1px solid #e2e8f0',
+                                                background: '#fff',
+                                                borderRadius: '999px',
+                                                padding: '8px 14px',
+                                                cursor: 'pointer',
+                                                color: '#ff6b35',
+                                                fontWeight: 700,
+                                            }}
+                                            >
+                                            <i className={modalSpace.IsFavorited ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}></i>
+                                            {' '}
+                                            {Number(modalSpace.FavoriteCount || 0)}
+                                            </button>
                                         </p>
                                     </div>
                                     <button onClick={() => setModalSpace(null)} style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#a0aec0', cursor: 'pointer', flexShrink: 0 }}>&times;</button>
+                               
                                 </div>
 
                                 {/* Details View */}
@@ -934,7 +1122,6 @@ export default function SearchPage() {
                                                 </div>
                                             )}
                                         </div>
-
                                         <div style={{ marginBottom: '24px' }}>
                                             <span style={{ fontSize: '13px', color: '#4a5568', fontWeight: 700, display: 'block', marginBottom: '10px' }}>{t.includedAmenities}</span>
                                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -944,7 +1131,6 @@ export default function SearchPage() {
                                                 {!modalSpace.ClimateControlled && !modalSpace.SecuritySystem && !modalSpace.ParkingAvailable && <span style={{ color: '#a0aec0', fontSize: '14px', fontStyle: 'italic' }}>{t.basicStorage}</span>}
                                             </div>
                                         </div>
-
                                         {/* Compact Pricing Breakdown */}
                                         <div style={{ display: 'flex', gap: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '12px', paddingBottom: '8px', marginTop: 'auto' }}>
                                             <div style={{ flex: '1', textAlign: 'center', borderRight: '1px solid #e2e8f0', paddingRight: '16px' }}>
@@ -1146,7 +1332,70 @@ export default function SearchPage() {
                     onClose={() => setShow3DVisualizer(false)}
                 />
             )}
+            {showFavorites && (
+            <div className="review-modal-overlay" style={{ zIndex: 2000 }}>
+                <div className="review-modal" style={{ maxWidth: '720px', width: '92%' }}>
+                <div className="review-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3>My Favorite Spaces</h3>
+                    <button onClick={() => setShowFavorites(false)} style={{ border: 'none', background: 'transparent', fontSize: '24px', cursor: 'pointer' }}>
+                    &times;
+                    </button>
+                </div>
 
+                <div className="review-modal-body">
+                    {favoritesLoading && <Loader />}
+
+                    {!favoritesLoading && favorites.length === 0 && (
+                    <p style={{ color: '#718096' }}>No favorite spaces yet.</p>
+                    )}
+
+                    {!favoritesLoading && favorites.map(space => (
+                    <div
+                        key={space.SpaceID}
+                        style={{
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        padding: '12px',
+                        marginBottom: '10px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        }}
+                    >
+                        <div>
+                        <h4 style={{ margin: '0 0 4px 0', color: '#1a365d' }}>{space.Title}</h4>
+                        <p style={{ margin: 0, color: '#718096', fontSize: '13px' }}>
+                            {space.City} {space.AddressLine1 ? `, ${space.AddressLine1}` : ''}
+                        </p>
+                        <p style={{ margin: '6px 0 0 0', color: '#ff6b35', fontSize: '13px', fontWeight: 700 }}>
+                            <i className="fa-solid fa-heart"></i> {Number(space.FavoriteCount || 0)}
+                        </p>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                            className="btn btn-outline"
+                            onClick={() => toggleFavorite(space.SpaceID, true)}
+                        >
+                            Remove
+                        </button>
+
+                        <button
+                            className="btn btn-dark"
+                            onClick={() => {
+                            setShowFavorites(false);
+                            openDetailsModal(space);
+                            }}
+                        >
+                            View Details
+                        </button>
+                        </div>
+                    </div>
+                    ))}
+                </div>
+                </div>
+            </div>
+            )}
             <footer className="footer">
                 <div className="container">
                     <div className="footer-content">

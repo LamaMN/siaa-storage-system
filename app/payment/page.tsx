@@ -247,19 +247,21 @@ export default function PaymentPage() {
     return (
         <>
             <header className="header">
-                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
-                    <LanguageToggle />
-                </div>
+                
                 <div className="container">
                     <div className="header-content">
+                        <div className="logo">
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
+                        </div>
                         <nav className="nav">
                             <a href="/dashboard">{t.dashboard}</a>
                             <a href="/#about">{t.about}</a>
                             <a href="/#features">{t.features}</a>
                             <a href="/#how-it-works">{t.howItWorks}</a>
                         </nav>
-                        <div className="logo">
-                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
+                        
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                            <LanguageToggle />
                         </div>
                     </div>
                 </div>

@@ -179,4 +179,6 @@ export interface SpaceSearchFilters {
     sortBy?: 'match' | 'priceLow' | 'priceHigh' | 'distance' | 'rating' | 'newest';
     page?: number;
     limit?: number;
+    seekerId?: number;
+
 }

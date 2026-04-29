@@ -79,7 +79,17 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
       s.SpaceID, s.ProviderID, s.Title, s.Description, s.SpaceType, s.Size,
       s.Width, s.Length, s.Height,
       s.PricePerMonth, s.PricePerWeek, s.PricePerDay, s.IsAvailable, s.Status,
-      s.FavoriteCount, s.MinRentalPeriod, s.CreatedAt, s.UpdatedAt,
+      s.FavoriteCount,
+      CASE 
+        WHEN @seekerId IS NOT NULL AND EXISTS (
+          SELECT 1 
+          FROM Favorites f
+          WHERE f.SpaceID = s.SpaceID
+            AND f.SeekerID = @seekerId
+        )
+        THEN 1 ELSE 0
+      END AS IsFavorited,
+      s.MinRentalPeriod, s.CreatedAt, s.UpdatedAt,
       l.AddressLine1, l.AddressLine2, l.City, l.Region AS Neighborhood, l.Latitude, l.Longitude, l.Landmark,
       p.FirstName AS ProviderFirstName, p.LastName AS ProviderLastName,
       p.BusinessName,
@@ -148,6 +158,7 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
         : null,
       skip,
       limit,
+      seekerId: filters.seekerId || null,
     }
   );
   return {
@@ -462,4 +473,82 @@ export async function getSpaceImagesMeta(spaceId: number): Promise<SpaceImage[]>
      FROM SpaceImages WHERE SpaceID = @spaceId ORDER BY ImageOrder ASC`,
     { spaceId }
   );
+}
+export async function getSeekerFavorites(seekerId: number) {
+  return query(`
+    SELECT 
+      s.SpaceID, s.ProviderID, s.Title, s.SpaceType, s.Size,
+      s.PricePerMonth, s.PricePerWeek, s.PricePerDay,
+      ISNULL(s.FavoriteCount, 0) AS FavoriteCount,
+      l.City, l.AddressLine1,
+      img.FirstImageID
+    FROM Favorites f
+    JOIN StorageSpaces s ON s.SpaceID = f.SpaceID
+    LEFT JOIN Locations l ON l.SpaceID = s.SpaceID
+    LEFT JOIN (
+      SELECT SpaceID, MIN(ImageID) AS FirstImageID
+      FROM SpaceImages
+      GROUP BY SpaceID
+    ) img ON img.SpaceID = s.SpaceID
+    WHERE f.SeekerID = @seekerId
+    ORDER BY f.CreatedAt DESC
+  `, { seekerId });
+}
+
+export async function addFavorite(seekerId: number, spaceId: number) {
+  await execute(`
+    BEGIN TRANSACTION;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM Favorites
+      WHERE SeekerID = @seekerId AND SpaceID = @spaceId
+    )
+    BEGIN
+      INSERT INTO Favorites (SeekerID, SpaceID)
+      VALUES (@seekerId, @spaceId);
+
+      UPDATE StorageSpaces
+      SET FavoriteCount = ISNULL(FavoriteCount, 0) + 1
+      WHERE SpaceID = @spaceId;
+    END
+
+    COMMIT TRANSACTION;
+  `, { seekerId, spaceId });
+
+  return queryOne(`
+    SELECT ISNULL(FavoriteCount, 0) AS FavoriteCount
+    FROM StorageSpaces
+    WHERE SpaceID = @spaceId
+  `, { spaceId });
+}
+
+export async function removeFavorite(seekerId: number, spaceId: number) {
+  await execute(`
+    BEGIN TRANSACTION;
+
+    IF EXISTS (
+      SELECT 1 FROM Favorites
+      WHERE SeekerID = @seekerId AND SpaceID = @spaceId
+    )
+    BEGIN
+      DELETE FROM Favorites
+      WHERE SeekerID = @seekerId AND SpaceID = @spaceId;
+
+      UPDATE StorageSpaces
+      SET FavoriteCount =
+        CASE 
+          WHEN ISNULL(FavoriteCount, 0) > 0 THEN FavoriteCount - 1
+          ELSE 0
+        END
+      WHERE SpaceID = @spaceId;
+    END
+
+    COMMIT TRANSACTION;
+  `, { seekerId, spaceId });
+
+  return queryOne(`
+    SELECT ISNULL(FavoriteCount, 0) AS FavoriteCount
+    FROM StorageSpaces
+    WHERE SpaceID = @spaceId
+  `, { spaceId });
 }

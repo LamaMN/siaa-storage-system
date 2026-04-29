@@ -26,8 +26,22 @@ export async function GET(request: NextRequest) {
             limit,
         };
 
-        const result = await searchAndRecommendSpaces(filters);
-        return successResponse({ spaces: result.spaces, page, limit, count: result.spaces.length, totalCount: result.totalCount });
+        const token = extractTokenFromHeader(request.headers.get('authorization'));
+
+        let seekerId: number | undefined = undefined;
+
+        if (token) {
+        const payload = await verifyToken(token);
+        if (payload.userType === 'seeker') {
+            seekerId = payload.id;
+        }
+        }
+
+        const result = await searchAndRecommendSpaces({
+        ...filters,
+        seekerId,
+        });        
+    return successResponse({ spaces: result.spaces, page, limit, count: result.spaces.length, totalCount: result.totalCount });
     } catch (err) {
         console.error('Search spaces error:', err);
         return errorResponse('Failed to search spaces', 500);
