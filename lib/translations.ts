@@ -762,6 +762,32 @@ export const translations = {
         book: "Book",
         loadingText: "Loading...",
         reviewPlaceholder: "Share your experience with this storage space...",
+
+        // ===== chatbot =====
+        chatbotAssistant: "Si'aa Assistant",
+        chatbotGreeting: "Hello! How can I help you today? Please choose a topic below:",
+        chatbotBack: "Back",
+        chatbotClose: "Close Chat",
+        chatbotToggle: "Toggle Chat",
+
+        chatbotSectionGeneral: "General Information",
+        chatbotSectionRenters: "For Renters (Looking for Storage)",
+        chatbotSectionHosts: "For Hosts (Listing Space)",
+
+        chatbotQ1: "What is Si'aa?",
+        chatbotA1: "Si'aa is a peer-to-peer storage marketplace in Saudi Arabia where you can find verified nearby storage spaces or list your extra space to earn income.",
+        chatbotQ2: "How does the platform work?",
+        chatbotA2: "Hosts list their unused spaces, and Renters search for spaces that meet their needs. Si'aa handles the connection and payment securely.",
+
+        chatbotQ3: "How do I book a storage space?",
+        chatbotA3: "You can browse available spaces, select the one that fits your needs, choose your dates, and click book.",
+        chatbotQ4: "Is my stored items safe?",
+        chatbotA4: "We verify all hosts and spaces to ensure a safe environment for your belongings.",
+
+        chatbotQ5: "How do I list my space?",
+        chatbotA5: 'Click on "List your space", fill in the details about your location, size, and price, and publish your listing!',
+        chatbotQ6: "How do I get paid?",
+        chatbotA6: "Payments are processed securely through our platform and transferred directly to your registered bank account.",
     },
     ar: {
         // =====ar homepage =====
@@ -1590,5 +1616,31 @@ export const translations = {
         book: "احجز",
         loadingText: "جاري التحميل...",
         reviewPlaceholder: "شارك تجربتك مع مساحة التخزين هذه...",
+
+        // ===== chatbot =====
+        chatbotAssistant: "مساعد سِعة",
+        chatbotGreeting: "مرحباً! كيف يمكنني مساعدتك اليوم؟ يرجى اختيار موضوع أدناه:",
+        chatbotBack: "رجوع",
+        chatbotClose: "إغلاق المحادثة",
+        chatbotToggle: "تبديل المحادثة",
+
+        chatbotSectionGeneral: "معلومات عامة",
+        chatbotSectionRenters: "للمستأجرين (البحث عن مساحة)",
+        chatbotSectionHosts: "للمضيفين (عرض مساحة)",
+
+        chatbotQ1: "ما هي سِعة؟",
+        chatbotA1: "سِعة هي منصة تخزين من شخص لشخص في المملكة العربية السعودية، حيث يمكنك إيجاد مساحات تخزين قريبة موثقة أو عرض مساحتك الإضافية لكسب دخل إضافي.",
+        chatbotQ2: "كيف تعمل المنصة؟",
+        chatbotA2: "يعرض المضيفون مساحاتهم غير المستخدمة، ويبحث المستأجرون عن المساحات التي تناسب احتياجاتهم. تتولى سِعة التواصل والدفع بشكل آمن.",
+
+        chatbotQ3: "كيف أحجز مساحة تخزين؟",
+        chatbotA3: "يمكنك تصفح المساحات المتاحة، واختيار المناسب منها، وتحديد تواريخك، ثم الضغط على زر الحجز.",
+        chatbotQ4: "هل أغراضي المخزنة في أمان؟",
+        chatbotA4: "نتحقق من جميع المضيفين والمساحات لضمان بيئة آمنة لممتلكاتك.",
+
+        chatbotQ5: "كيف أعرض مساحتي؟",
+        chatbotA5: "اضغط على \"عرض مساحتك\"، أدخل التفاصيل المتعلقة بموقعك والحجم والسعر، ثم انشر إعلانك!",
+        chatbotQ6: "كيف أستلم مدفوعاتي؟",
+        chatbotA6: "تتم معالجة المدفوعات بشكل آمن عبر منصتنا وتُحوَّل مباشرةً إلى حسابك البنكي المسجل.",
     },
 } as const;
