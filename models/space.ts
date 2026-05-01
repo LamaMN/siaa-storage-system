@@ -78,6 +78,7 @@ export interface SpaceWithDetails extends StorageSpace {
     AddressLine1?: string;
     AddressLine2?: string;
     City?: string;
+    Neighborhood?: string;
     Region?: string;
     PostalCode?: string;
     Country?: string;
@@ -162,6 +163,7 @@ export interface UpdateSpaceInput extends Partial<CreateSpaceInput> {
 
 export interface SpaceSearchFilters {
     city?: string;
+    neighborhood?: string;
     spaceType?: string;
     minSize?: number;
     maxSize?: number;
@@ -177,4 +179,6 @@ export interface SpaceSearchFilters {
     sortBy?: 'match' | 'priceLow' | 'priceHigh' | 'distance' | 'rating' | 'newest';
     page?: number;
     limit?: number;
+    seekerId?: number;
+
 }

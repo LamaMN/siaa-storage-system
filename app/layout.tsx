@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import './globals.css';
+import Chatbot from '../components/Chatbot';
 
 export const metadata: Metadata = {
     title: {
@@ -45,7 +46,10 @@ export default async function RootLayout({
                     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
                 />
             </head>
-            <body suppressHydrationWarning>{children}</body>
+            <body suppressHydrationWarning>
+                {children}
+                <Chatbot />
+            </body>
         </html>
     );
 }

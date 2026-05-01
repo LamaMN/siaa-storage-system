@@ -62,15 +62,16 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
   const skip = (page - 1) * limit;
 
   const citySearch = filters.city ? `%${sanitizeLikeParam(filters.city)}%` : null;
+  const neighborhoodSearch = filters.neighborhood ? `%${sanitizeLikeParam(filters.neighborhood)}%` : null;
   const typeSearch = filters.spaceType || null;
   let orderByClause = 'ORDER BY MatchScore DESC, rv.AvgRating DESC';
   if (filters.sortBy === 'priceLow') {
-      orderByClause = 'ORDER BY s.PricePerMonth ASC, MatchScore DESC';
+    orderByClause = 'ORDER BY s.PricePerMonth ASC, MatchScore DESC';
   } else if (filters.sortBy === 'priceHigh') {
-      orderByClause = 'ORDER BY s.PricePerMonth DESC, MatchScore DESC';
+    orderByClause = 'ORDER BY s.PricePerMonth DESC, MatchScore DESC';
   } else if (filters.sortBy === 'distance') {
-      // Simplification: if distance is chosen without coordinates, order by MatchScore
-      orderByClause = 'ORDER BY MatchScore DESC';
+    // Simplification: if distance is chosen without coordinates, order by MatchScore
+    orderByClause = 'ORDER BY MatchScore DESC';
   }
 
   const rows = await query<SpaceWithDetails & { MatchScore: number }>(
@@ -78,8 +79,18 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
       s.SpaceID, s.ProviderID, s.Title, s.Description, s.SpaceType, s.Size,
       s.Width, s.Length, s.Height,
       s.PricePerMonth, s.PricePerWeek, s.PricePerDay, s.IsAvailable, s.Status,
-      s.FavoriteCount, s.MinRentalPeriod, s.CreatedAt, s.UpdatedAt,
-      l.AddressLine1, l.City, l.Region, l.Latitude, l.Longitude, l.Landmark,
+      s.FavoriteCount,
+      CASE 
+        WHEN @seekerId IS NOT NULL AND EXISTS (
+          SELECT 1 
+          FROM Favorites f
+          WHERE f.SpaceID = s.SpaceID
+            AND f.SeekerID = @seekerId
+        )
+        THEN 1 ELSE 0
+      END AS IsFavorited,
+      s.MinRentalPeriod, s.CreatedAt, s.UpdatedAt,
+      l.AddressLine1, l.AddressLine2, l.City, l.Region AS Neighborhood, l.Latitude, l.Longitude, l.Landmark,
       p.FirstName AS ProviderFirstName, p.LastName AS ProviderLastName,
       p.BusinessName,
       sf.ClimateControlled, sf.SecuritySystem, sf.CCTVMonitored,
@@ -117,6 +128,7 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
     ) img ON img.SpaceID = s.SpaceID
     WHERE s.Status = 'Active' AND s.IsAvailable = 1
       AND (@citySearch IS NULL OR l.City LIKE @citySearch)
+      AND (@neighborhoodSearch IS NULL OR l.AddressLine2 LIKE @neighborhoodSearch)
       AND (@spaceType IS NULL OR s.SpaceType = @spaceType)
       AND (@maxPrice IS NULL OR s.PricePerMonth <= @maxPrice)
       AND (@minPrice IS NULL OR s.PricePerMonth >= @minPrice)
@@ -129,6 +141,7 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
     {
       city: filters.city || null,
       citySearch,
+      neighborhoodSearch,
       spaceType: typeSearch,
       maxPrice: filters.maxPrice || null,
       minPrice: filters.minPrice || null,
@@ -145,6 +158,7 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
         : null,
       skip,
       limit,
+      seekerId: filters.seekerId || null,
     }
   );
   return {
@@ -154,14 +168,17 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
 }
 
 export async function getAvailableNeighborhoods(): Promise<string[]> {
-  const rows = await query<{ City: string }>(
-    `SELECT DISTINCT l.City
+  // AddressLine2 holds the neighbourhood slug saved by the provider dropdown.
+  const rows = await query<{ val: string }>(
+    `SELECT DISTINCT LTRIM(RTRIM(l.AddressLine2)) AS val
      FROM StorageSpaces s
      JOIN Locations l ON l.SpaceID = s.SpaceID
-     WHERE s.Status = 'Active' AND s.IsAvailable = 1 AND l.City IS NOT NULL
-     ORDER BY l.City ASC`
+     WHERE s.Status = 'Active' AND s.IsAvailable = 1
+       AND l.AddressLine2 IS NOT NULL
+       AND LTRIM(RTRIM(l.AddressLine2)) <> ''
+     ORDER BY val ASC`
   );
-  return rows.map(r => r.City);
+  return rows.map(r => r.val);
 }
 
 export async function getRecommendedSpaces(city: string, limit = 6): Promise<SpaceWithDetails[]> {
@@ -456,4 +473,82 @@ export async function getSpaceImagesMeta(spaceId: number): Promise<SpaceImage[]>
      FROM SpaceImages WHERE SpaceID = @spaceId ORDER BY ImageOrder ASC`,
     { spaceId }
   );
+}
+export async function getSeekerFavorites(seekerId: number) {
+  return query(`
+    SELECT 
+      s.SpaceID, s.ProviderID, s.Title, s.SpaceType, s.Size,
+      s.PricePerMonth, s.PricePerWeek, s.PricePerDay,
+      ISNULL(s.FavoriteCount, 0) AS FavoriteCount,
+      l.City, l.AddressLine1,
+      img.FirstImageID
+    FROM Favorites f
+    JOIN StorageSpaces s ON s.SpaceID = f.SpaceID
+    LEFT JOIN Locations l ON l.SpaceID = s.SpaceID
+    LEFT JOIN (
+      SELECT SpaceID, MIN(ImageID) AS FirstImageID
+      FROM SpaceImages
+      GROUP BY SpaceID
+    ) img ON img.SpaceID = s.SpaceID
+    WHERE f.SeekerID = @seekerId
+    ORDER BY f.CreatedAt DESC
+  `, { seekerId });
+}
+
+export async function addFavorite(seekerId: number, spaceId: number) {
+  await execute(`
+    BEGIN TRANSACTION;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM Favorites
+      WHERE SeekerID = @seekerId AND SpaceID = @spaceId
+    )
+    BEGIN
+      INSERT INTO Favorites (SeekerID, SpaceID)
+      VALUES (@seekerId, @spaceId);
+
+      UPDATE StorageSpaces
+      SET FavoriteCount = ISNULL(FavoriteCount, 0) + 1
+      WHERE SpaceID = @spaceId;
+    END
+
+    COMMIT TRANSACTION;
+  `, { seekerId, spaceId });
+
+  return queryOne(`
+    SELECT ISNULL(FavoriteCount, 0) AS FavoriteCount
+    FROM StorageSpaces
+    WHERE SpaceID = @spaceId
+  `, { spaceId });
+}
+
+export async function removeFavorite(seekerId: number, spaceId: number) {
+  await execute(`
+    BEGIN TRANSACTION;
+
+    IF EXISTS (
+      SELECT 1 FROM Favorites
+      WHERE SeekerID = @seekerId AND SpaceID = @spaceId
+    )
+    BEGIN
+      DELETE FROM Favorites
+      WHERE SeekerID = @seekerId AND SpaceID = @spaceId;
+
+      UPDATE StorageSpaces
+      SET FavoriteCount =
+        CASE 
+          WHEN ISNULL(FavoriteCount, 0) > 0 THEN FavoriteCount - 1
+          ELSE 0
+        END
+      WHERE SpaceID = @spaceId;
+    END
+
+    COMMIT TRANSACTION;
+  `, { seekerId, spaceId });
+
+  return queryOne(`
+    SELECT ISNULL(FavoriteCount, 0) AS FavoriteCount
+    FROM StorageSpaces
+    WHERE SpaceID = @spaceId
+  `, { spaceId });
 }

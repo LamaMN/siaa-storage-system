@@ -35,12 +35,27 @@ export default async function HomePage() {
     return (
         <>
             <header className="header">
-                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
-                    <LanguageToggle />
-                </div>
 
                 <div className="container">
                     <div className="header-content">
+                        
+                        <div className="logo">
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
+                        </div>
+
+                        <nav className="nav">
+                            <a href="#about">{t.about}</a>
+                            <a href="#features">{t.features}</a>
+                            <a href="#how-it-works">{t.howItWorks}</a>
+                        </nav>
+
+                        <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '20px',
+                        }}
+                        >
                         <a
                             href="/register"
                             className="btn btn-primary btn-header"
@@ -49,14 +64,7 @@ export default async function HomePage() {
                             {t.getStarted}
                         </a>
 
-                        <nav className="nav">
-                            <a href="#about">{t.about}</a>
-                            <a href="#features">{t.features}</a>
-                            <a href="#how-it-works">{t.howItWorks}</a>
-                        </nav>
-
-                        <div className="logo">
-                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
+                        <LanguageToggle />
                         </div>
                     </div>
                 </div>

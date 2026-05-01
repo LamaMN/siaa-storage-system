@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
 
         const filters: SpaceSearchFilters = {
             city: searchParams.get('city') || undefined,
+            neighborhood: searchParams.get('neighborhood') || undefined,
             spaceType: searchParams.get('spaceType') || searchParams.get('space_type') || undefined,
             maxPrice: searchParams.has('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined,
             minPrice: searchParams.has('minPrice') ? parseFloat(searchParams.get('minPrice')!) : undefined,
@@ -25,8 +26,22 @@ export async function GET(request: NextRequest) {
             limit,
         };
 
-        const result = await searchAndRecommendSpaces(filters);
-        return successResponse({ spaces: result.spaces, page, limit, count: result.spaces.length, totalCount: result.totalCount });
+        const token = extractTokenFromHeader(request.headers.get('authorization'));
+
+        let seekerId: number | undefined = undefined;
+
+        if (token) {
+        const payload = await verifyToken(token);
+        if (payload.userType === 'seeker') {
+            seekerId = payload.id;
+        }
+        }
+
+        const result = await searchAndRecommendSpaces({
+        ...filters,
+        seekerId,
+        });        
+    return successResponse({ spaces: result.spaces, page, limit, count: result.spaces.length, totalCount: result.totalCount });
     } catch (err) {
         console.error('Search spaces error:', err);
         return errorResponse('Failed to search spaces', 500);

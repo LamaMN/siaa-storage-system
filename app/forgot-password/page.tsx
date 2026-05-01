@@ -65,20 +65,20 @@ export default function ForgotPasswordPage() {
     return (
         <>
             <header className="header">
-                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
-                    <LanguageToggle />
-                </div>
 
                 <div className="container">
                     <div className="header-content">
+                        <div className="logo">
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
+                        </div>
                         <nav className="nav">
                             <a href="/login">{t.signIn}</a>
                             <a href="/register">{t.register}</a>
                         </nav>
 
-                        <div className="logo">
-                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
-                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                    <LanguageToggle />
+                </div>
                     </div>
                 </div>
             </header>

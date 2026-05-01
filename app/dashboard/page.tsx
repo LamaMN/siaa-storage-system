@@ -77,6 +77,7 @@ interface SpaceItem {
     ActiveBookings?: number;
     AvgRating?: number;
     CreatedAt?: string;
+    IsFavorited?: boolean;
 }
 
 interface Stats {
@@ -124,6 +125,11 @@ export default function DashboardPage() {
     const [calendarBookings, setCalendarBookings] = useState<CalendarBooking[]>([]);
     const [calendarMonth, setCalendarMonth] = useState(new Date());
     const [calendarFilter, setCalendarFilter] = useState<number | 'all'>('all');
+
+
+    const [showFavorites, setShowFavorites] = useState(false);
+    const [favorites, setFavorites] = useState<SpaceItem[]>([]);
+    const [favoritesLoading, setFavoritesLoading] = useState(false);
 
     const [stats, setStats] = useState<Stats>({});
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -386,6 +392,61 @@ export default function DashboardPage() {
         }
     }
 
+
+    function normalizeSpace(space: SpaceItem): SpaceItem {
+        return {
+            ...space,
+            FavoriteCount: Number(space.FavoriteCount || 0),
+            IsFavorited: true,
+        };
+    }
+
+    async function fetchFavorites() {
+        if (!token) return;
+
+        setFavoritesLoading(true);
+
+        try {
+            const res = await fetch('/api/favorites', {
+                headers: authHeaders(token),
+            });
+
+            const json = await res.json();
+            const data = json.data || json;
+
+            setFavorites((data.favorites || []).map(normalizeSpace));
+            setShowFavorites(true);
+        } finally {
+            setFavoritesLoading(false);
+        }
+    }
+
+    async function removeFavorite(spaceId: number) {
+        if (!token) return;
+
+        const res = await fetch(`/api/spaces/${spaceId}/favorite`, {
+            method: 'DELETE',
+            headers: authHeaders(token),
+        });
+
+        const json = await res.json();
+        const data = json.data || json;
+
+        if (!res.ok) {
+            alert(json.error || 'Failed to remove favorite');
+            return;
+        }
+
+        setFavorites(prev => prev.filter(space => space.SpaceID !== spaceId));
+
+        setProviderSpaces(prev =>
+            prev.map(space =>
+                space.SpaceID === spaceId
+                    ? { ...space, FavoriteCount: Number(data.FavoriteCount || 0) }
+                    : space
+            )
+        );
+    }
     function logout() {
         localStorage.removeItem('siaaUser');
         localStorage.removeItem('siaaToken');
@@ -402,10 +463,6 @@ export default function DashboardPage() {
     return (
         <>
             <header className="header">
-                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
-                    <LanguageToggle />
-                </div>
-
                 <div className="container">
                     <div className="header-content">
                         {/* Navigation temporarily disabled */}
@@ -420,7 +477,27 @@ export default function DashboardPage() {
                         <div className="logo">
                             <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '6px 20px' }}>
+                            {!isProvider && (
+                                <button
+                                    onClick={fetchFavorites}
+                                    style={{
+                                        border: 'none',
+                                        background: 'transparent',
+                                        cursor: 'pointer',
+                                        color: '#ff6b35',
+                                        fontSize: '20px',
+                                    }}
+                                    title="Favorites"
+                                >
+                                    <i className="fa-solid fa-heart"></i>
+                                </button>
+                            )}
+
+                            <LanguageToggle />
+                        </div>
                     </div>
+                    
                 </div>
             </header>
 
@@ -757,8 +834,13 @@ export default function DashboardPage() {
                                                     <div className="history-item-details">
                                                         <p><i className="fa-solid fa-location-dot"></i> {space.City}, {space.AddressLine1}</p>
                                                         <p><i className="fa-solid fa-box"></i> {space.SpaceType} · {space.Size} m²</p>
-                                                        <p><i className="fa-solid fa-heart"></i> {space.FavoriteCount} {t.favorites} · {space.TotalBookings} {t.bookings}</p>
-                                                    </div>
+                                                        <p>
+                                                        <i className="fa-solid fa-heart" style={{ color: '#ff6b35' }}></i>
+                                                        {' '}
+                                                        {Number(space.FavoriteCount || 0)} {t.favorites}
+                                                        {' '}·{' '}
+                                                        {space.TotalBookings} {t.bookings}
+                                                        </p>                                                    </div>
                                                     <div className="history-item-footer">
                                                         <span className="history-item-price">{formatPrice(space.PricePerMonth)} SAR/month</span>
                                                         <span className="history-item-date">{t.listed} {formatDate(space.CreatedAt)}</span>
@@ -1374,7 +1456,73 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
+            {showFavorites && (
+                <div className="review-modal-overlay" style={{ zIndex: 3000 }}>
+                    <div className="review-modal" style={{ maxWidth: '720px', width: '92%' }}>
+                        <div className="review-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3>My Favorite Spaces</h3>
+                            <button
+                                onClick={() => setShowFavorites(false)}
+                                style={{ border: 'none', background: 'transparent', fontSize: '24px', cursor: 'pointer' }}
+                            >
+                                &times;
+                            </button>
+                        </div>
 
+                        <div className="review-modal-body">
+                            {favoritesLoading && <Loader />}
+
+                            {!favoritesLoading && favorites.length === 0 && (
+                                <p style={{ color: '#718096' }}>No favorite spaces yet.</p>
+                            )}
+
+                            {!favoritesLoading && favorites.map(space => (
+                                <div
+                                    key={space.SpaceID}
+                                    style={{
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '12px',
+                                        padding: '12px',
+                                        marginBottom: '10px',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        gap: '12px',
+                                    }}
+                                >
+                                    <div>
+                                        <h4 style={{ margin: '0 0 4px 0', color: '#1a365d' }}>{space.Title}</h4>
+                                        <p style={{ margin: 0, color: '#718096', fontSize: '13px' }}>
+                                            {space.City} {space.AddressLine1 ? `, ${space.AddressLine1}` : ''}
+                                        </p>
+                                        <p style={{ margin: '6px 0 0 0', color: '#ff6b35', fontSize: '13px', fontWeight: 700 }}>
+                                            <i className="fa-solid fa-heart"></i> {Number(space.FavoriteCount || 0)}
+                                        </p>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <button
+                                            className="btn btn-outline btn-small"
+                                            onClick={() => removeFavorite(space.SpaceID)}
+                                        >
+                                            Remove
+                                        </button>
+
+                                        <button
+                                        className="btn btn-dark btn-small"
+                                        onClick={() => {
+                                            sessionStorage.setItem('openSpaceId', String(space.SpaceID));
+                                            window.location.href = '/search';
+                                        }}
+                                        >
+                                        View Details
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
             <footer className="footer">
                 <div className="container">
                     <div className="footer-content">
