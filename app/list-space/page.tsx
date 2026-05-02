@@ -145,30 +145,32 @@ export default function ListSpacePage() {
                 !formData.listingHeight ||
                 !formData.listingDescription
             ) {
-                alert(t.fillRequiredFieldsStep1);
+                setError(t.fillRequiredFieldsStep1);
                 return;
             }
         }
 
         if (currentStep === 2) {
             if (!formData.listingPhotos || formData.listingPhotos.length < 3) {
-                alert(t.uploadAtLeastThreePhotos);
+                setError(t.uploadAtLeastThreePhotos);
                 return;
             }
         }
 
         if (currentStep === 3) {
             if (!formData.pricePerMonth) {
-                alert(t.provideMonthlyPrice);
+                setError(t.provideMonthlyPrice);
                 return;
             }
         }
 
+        setError('');
         setCurrentStep(prev => prev + 1);
         window.scrollTo(0, 0);
     };
 
     const prevStep = () => {
+        setError('');
         setCurrentStep(prev => prev - 1);
         window.scrollTo(0, 0);
     };
@@ -335,8 +337,8 @@ export default function ListSpacePage() {
                             </div>
 
                             {error && (
-                                <div style={{ background: '#fee2e2', color: '#991b1b', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                                    ✗ {error}
+                                <div style={{ background: '#fee2e2', color: '#991b1b', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', width: '100%', boxSizing: 'border-box' }}>
+                                    {error}
                                 </div>
                             )}
 

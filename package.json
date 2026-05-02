@@ -13,6 +13,7 @@
     "@react-three/fiber": "^9.6.0",
     "@types/leaflet": "^1.9.21",
     "bcryptjs": "^2.4.3",
+    "html2pdf.js": "^0.14.0",
     "jose": "^5.9.6",
     "leaflet": "^1.9.4",
     "mssql": "^11.0.1",

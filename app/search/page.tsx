@@ -1155,7 +1155,7 @@ export default function SearchPage() {
                                         </div>
                                         {/* Provider / Contact Info */}
                                         <div style={{ marginBottom: '16px', padding: '14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                                            <span style={{ fontSize: '13px', color: '#4a5568', fontWeight: 700, display: 'block', marginBottom: '10px' }}>{t.providerContactTitle || 'Provider Information'}</span>
+                                            <span style={{ fontSize: '13px', color: '#4a5568', fontWeight: 700, display: 'block', marginBottom: '10px' }}>{(t as unknown as Record<string, string>).providerContactTitle || 'Provider Information'}</span>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
                                                 <span
                                                     onClick={(e) => { e.stopPropagation(); if (modalSpace.ProviderID) openProviderPopup(modalSpace.ProviderID); }}
@@ -1219,12 +1219,12 @@ export default function SearchPage() {
                                         <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', margin: '20px 0' }}>
                                             <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a365d', margin: '0 0 12px 0' }}>
                                                 <i className="fa-solid fa-user-tie" style={{ marginRight: '8px', color: '#ff6b35' }}></i>
-                                                {t.providerContactTitle || 'Provider Information'}
+                                                {(t as unknown as Record<string, string>).providerContactTitle || 'Provider Information'}
                                             </h3>
                                             
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                                                 <div>
-                                                    <div style={{ fontSize: '12px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{t.providerNameLabel || 'Name'}</div>
+                                                    <div style={{ fontSize: '12px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{(t as unknown as Record<string, string>).providerNameLabel || 'Name'}</div>
                                                     <div style={{ fontSize: '15px', color: '#2d3748', fontWeight: 600 }}>
                                                         {modalSpace.BusinessName || `${modalSpace.ProviderFirstName} ${modalSpace.ProviderLastName}`}
                                                     </div>
@@ -1232,7 +1232,7 @@ export default function SearchPage() {
 
                                                 {modalSpace.ProviderPhone && (
                                                     <div>
-                                                        <div style={{ fontSize: '12px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{t.providerPhoneLabel || 'Phone'}</div>
+                                                        <div style={{ fontSize: '12px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{(t as unknown as Record<string, string>).providerPhoneLabel || 'Phone'}</div>
                                                         <a href={`tel:${modalSpace.ProviderPhone}`} style={{ fontSize: '15px', color: '#ff6b35', fontWeight: 600, textDecoration: 'none' }}>
                                                             <i className="fa-solid fa-phone" style={{ fontSize: '12px', marginRight: '6px' }}></i>
                                                             {modalSpace.ProviderPhone}
@@ -1242,7 +1242,7 @@ export default function SearchPage() {
 
                                                 {modalSpace.ProviderEmail && (
                                                     <div>
-                                                        <div style={{ fontSize: '12px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{t.providerEmailLabel || 'Email'}</div>
+                                                        <div style={{ fontSize: '12px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{(t as unknown as Record<string, string>).providerEmailLabel || 'Email'}</div>
                                                         <a href={`mailto:${modalSpace.ProviderEmail}`} style={{ fontSize: '15px', color: '#ff6b35', fontWeight: 600, textDecoration: 'none' }}>
                                                             <i className="fa-solid fa-envelope" style={{ fontSize: '12px', marginRight: '6px' }}></i>
                                                             {modalSpace.ProviderEmail}

@@ -44,7 +44,10 @@ interface BookingItem {
     EndDate?: string;
     BookingStatus: string;
     TotalAmount?: number;
+    PlatformFee?: number;
+    SpecialRequests?: string;
     ProviderName?: string;
+    ProviderPhone?: string;
     HasReview?: boolean;
     CreatedAt?: string;
     SeekerName?: string;
@@ -52,6 +55,7 @@ interface BookingItem {
     SeekerPhone?: string;
     Size?: number;
     SpaceID?: number;
+    PricePerMonth?: number;
 }
 
 interface CalendarBooking {
@@ -104,10 +108,22 @@ function formatPrice(n?: number) {
 }
 
 const STATUS_CLASS: Record<string, string> = {
-    Active: 'status-active', Confirmed: 'status-active',
+    Active: 'status-active', Confirmed: 'status-active', Approved: 'status-active',
     Pending: 'status-pending', UnderReview: 'status-pending',
     Completed: 'status-completed',
     Cancelled: 'status-cancelled', Rejected: 'status-cancelled', Inactive: 'status-cancelled',
+};
+
+const LOGISTICS_COMPANY_NAMES: Record<string, string> = {
+    aramex: 'Aramex',
+    smsa: 'SMSA',
+    spl: 'SPL',
+};
+
+const LOGISTICS_COMPANY_LOGOS: Record<string, string> = {
+    aramex: '/Media/Aramex.png',
+    smsa: '/Media/SMSA.png',
+    spl: '/Media/SPL.png',
 };
 
 export default function DashboardPage() {
@@ -146,6 +162,7 @@ export default function DashboardPage() {
     const [reviewRating, setReviewRating] = useState(0);
     const [reviewComment, setReviewComment] = useState('');
     const [reviewError, setReviewError] = useState('');
+    const [invoiceBooking, setInvoiceBooking] = useState<BookingItem | null>(null);
 
     // Profile fields
     const [profile, setProfile] = useState({ firstName: '', lastName: '', email: '', phone: '', companyName: '', businessName: '', role: '', status: '' });
@@ -831,7 +848,15 @@ export default function DashboardPage() {
                                                         <span className="history-item-date">{t.booked}: {formatDate(booking.CreatedAt)}</span><br />
                                                         <span className="history-item-price">{formatPrice(booking.TotalAmount)} {t.sar}</span>
                                                     </div>
-                                                    <div className="history-item-footer-right">
+                                                    <div className="history-item-footer-right" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        <button
+                                                            className="btn btn-outline btn-small"
+                                                            style={{ borderColor: '#3b82f6', color: '#3b82f6' }}
+                                                            onClick={() => setInvoiceBooking(booking)}
+                                                        >
+                                                            <i className="fa-solid fa-file-invoice" style={{ marginRight: '4px' }}></i>
+                                                            Invoice
+                                                        </button>
                                                         {booking.BookingStatus === 'Pending' && (
                                                             <button
                                                                 className="btn btn-outline btn-small"
@@ -1628,6 +1653,250 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
+
+            {/* Invoice Modal */}
+            {invoiceBooking && (() => {
+                // Parse logistics info from SpecialRequests
+                let logisticsInfo: { type?: string; company?: string; address?: string; time?: string } | null = null;
+                try {
+                    if (invoiceBooking.SpecialRequests) {
+                        const parsed = JSON.parse(invoiceBooking.SpecialRequests);
+                        if (parsed.type === 'partner_pickup') {
+                            logisticsInfo = parsed;
+                        }
+                    }
+                } catch { /* not JSON or no logistics */ }
+
+                const storageAmount = (invoiceBooking.TotalAmount || 0);
+                const platformFee = invoiceBooking.PlatformFee || 0;
+                const logisticsFee = logisticsInfo?.company
+                    ? ({ aramex: 50, smsa: 60, spl: 55 }[logisticsInfo.company] || 0)
+                    : 0;
+                const subtotal = storageAmount;
+                const vat = parseFloat((subtotal * 0.15).toFixed(2));
+                const grandTotal = parseFloat((subtotal + vat).toFixed(2));
+
+                const startD = invoiceBooking.StartDate ? new Date(invoiceBooking.StartDate) : null;
+                const endD = invoiceBooking.EndDate ? new Date(invoiceBooking.EndDate) : null;
+                const durationDays = startD && endD ? Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+                const companyKey = logisticsInfo?.company || '';
+                const companyDisplayName = LOGISTICS_COMPANY_NAMES[companyKey] || companyKey.toUpperCase();
+                const companyLogo = LOGISTICS_COMPANY_LOGOS[companyKey] || '';
+
+                return (
+                    <div className="invoice-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setInvoiceBooking(null); }}>
+                        <div className="invoice-modal" id="invoice-content" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+                            <div className="invoice-header">
+                                <h3><i className="fa-solid fa-file-invoice"></i> {(t as any).invoiceTitle || 'Invoice'}</h3>
+                                <button className="invoice-close-btn" onClick={() => setInvoiceBooking(null)}>
+                                    <i className="fa-solid fa-times"></i>
+                                </button>
+                            </div>
+
+                            <div className="invoice-body">
+                                {/* Booking ID & Date */}
+                                <div className="invoice-id-row">
+                                    <div className="invoice-id">
+                                        {(t as any).invoiceBookingLabel || 'Booking'} <span>#{invoiceBooking.BookingID}</span>
+                                    </div>
+                                    <div className="invoice-date">
+                                        {formatDate(invoiceBooking.CreatedAt)}
+                                    </div>
+                                </div>
+
+                                {/* Booking Details */}
+                                <div className="invoice-section">
+                                    <h4 className="invoice-section-title">{(t as any).invoiceBookingDetails || 'Booking Details'}</h4>
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-box"></i> {(t as any).invoiceSpace || 'Space'}
+                                        </span>
+                                        <span className="invoice-detail-value">{invoiceBooking.SpaceTitle || 'Storage Space'}</span>
+                                    </div>
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-shapes"></i> {(t as any).invoiceType || 'Type'}
+                                        </span>
+                                        <span className="invoice-detail-value">{invoiceBooking.SpaceType || '—'}</span>
+                                    </div>
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-location-dot"></i> {(t as any).invoiceLocation || 'Location'}
+                                        </span>
+                                        <span className="invoice-detail-value">{[invoiceBooking.City, invoiceBooking.AddressLine1].filter(Boolean).join(', ') || '—'}</span>
+                                    </div>
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-calendar"></i> {(t as any).invoicePeriod || 'Period'}
+                                        </span>
+                                        <span className="invoice-detail-value">
+                                            {formatDate(invoiceBooking.StartDate)} – {formatDate(invoiceBooking.EndDate)}
+                                            {durationDays > 0 && <span style={{ color: '#718096', fontWeight: 400, marginLeft: lang === 'ar' ? '0' : '6px', marginRight: lang === 'ar' ? '6px' : '0' }}>({durationDays} {t.days})</span>}
+                                        </span>
+                                    </div>
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-expand"></i> {(t as any).invoiceSize || 'Size'}
+                                        </span>
+                                        <span className="invoice-detail-value">{invoiceBooking.Size ? `${invoiceBooking.Size} m²` : '—'}</span>
+                                    </div>
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-user"></i> {(t as any).invoiceProvider || 'Provider'}
+                                        </span>
+                                        <span className="invoice-detail-value">{invoiceBooking.ProviderName || '—'}</span>
+                                    </div>
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-phone"></i> {(t as any).invoiceProviderPhone || 'Provider Phone'}
+                                        </span>
+                                        <span className="invoice-detail-value" dir="ltr">{invoiceBooking.ProviderPhone || '—'}</span>
+                                    </div>
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-circle-info"></i> {(t as any).invoiceStatus || 'Status'}
+                                        </span>
+                                        <span className={`history-item-badge ${STATUS_CLASS[invoiceBooking.BookingStatus] || 'status-default'}`} style={{ fontSize: '11px', padding: '3px 10px' }}>
+                                            {invoiceBooking.BookingStatus}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <hr className="invoice-divider" />
+
+                                {/* Amount Breakdown */}
+                                <div className="invoice-section">
+                                    <h4 className="invoice-section-title">{(t as any).invoiceAmountBreakdown || 'Amount Breakdown'}</h4>
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-warehouse"></i> {(t as any).invoiceStorageFees || 'Storage Fees'}
+                                        </span>
+                                        <span className="invoice-detail-value">{formatPrice(storageAmount - logisticsFee)} {t.sar}</span>
+                                    </div>
+                                    {logisticsFee > 0 && (
+                                        <div className="invoice-detail-row">
+                                            <span className="invoice-detail-label">
+                                                <i className="fa-solid fa-truck"></i> {(t as any).invoiceLogistics || 'Logistics'} ({companyDisplayName})
+                                            </span>
+                                            <span className="invoice-detail-value">{formatPrice(logisticsFee)} {t.sar}</span>
+                                        </div>
+                                    )}
+                                    {platformFee > 0 && (
+                                        <div className="invoice-detail-row">
+                                            <span className="invoice-detail-label">
+                                                <i className="fa-solid fa-hand-holding-dollar"></i> {(t as any).invoicePlatformFee || 'Platform Fee'}
+                                            </span>
+                                            <span className="invoice-detail-value">{formatPrice(platformFee)} {t.sar}</span>
+                                        </div>
+                                    )}
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-percent"></i> {(t as any).invoiceVat || 'VAT (15%)'}
+                                        </span>
+                                        <span className="invoice-detail-value">{formatPrice(vat)} {t.sar}</span>
+                                    </div>
+                                </div>
+
+                                {/* Total */}
+                                <div className="invoice-total-row">
+                                    <span className="invoice-total-label">{t.total}</span>
+                                    <span className="invoice-total-value">{formatPrice(grandTotal)} {t.sar}</span>
+                                </div>
+
+                                {/* Logistics Info (if applicable) */}
+                                {logisticsInfo && (
+                                    <div className="invoice-logistics-card">
+                                        <div className="invoice-logistics-header">
+                                            <i className="fa-solid fa-truck-fast"></i>
+                                            <span>{(t as any).invoiceLogisticsService || 'Logistics Service'}</span>
+                                        </div>
+                                        <div className="invoice-logistics-details">
+                                            <p>
+                                                <strong>{(t as any).invoiceLogisticsProvider || 'Provider:'}</strong>
+                                                <span className="invoice-logistics-badge">
+                                                    {companyLogo && <img src={companyLogo} alt={companyDisplayName} />}
+                                                    {companyDisplayName}
+                                                </span>
+                                            </p>
+                                            {logisticsInfo.address && (
+                                                <p><strong>{(t as any).invoicePickupAddress || 'Pickup Address:'}</strong> {logisticsInfo.address}</p>
+                                            )}
+                                            {logisticsInfo.time && (
+                                                <p><strong>{(t as any).invoiceTimeSlot || 'Time Slot:'}</strong> {logisticsInfo.time === '9am-3pm' ? '9:00 AM – 3:00 PM' : '4:00 PM – 10:00 PM'}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="invoice-footer">
+                                <button className="invoice-print-btn" onClick={() => {
+                                    const printWindow = window.open('', '_blank');
+                                    if (!printWindow) return;
+                                    const invoiceEl = document.getElementById('invoice-content');
+                                    if (!invoiceEl) return;
+                                    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+                                        .map(el => el.outerHTML).join('\n');
+                                    
+                                    const safeSpaceTitle = invoiceBooking.SpaceTitle?.replace(/\s+/g, '_') || 'Space';
+                                    const docTitle = `Booking_${invoiceBooking.BookingID}_${safeSpaceTitle}`;
+
+                                    printWindow.document.write(`<!DOCTYPE html><html dir="${lang === 'ar' ? 'rtl' : 'ltr'}" lang="${lang}"><head><meta charset="utf-8"><title>${docTitle}</title>${styles}<style>body{margin:0;padding:24px;background:#fff;font-family:'Baloo Bhaijaan 2',sans-serif}.invoice-close-btn,.invoice-footer{display:none!important}.invoice-modal{box-shadow:none!important;max-width:100%!important;width:100%!important;border-radius:12px!important;margin:0!important}</style></head><body><div id="__next">${invoiceEl.outerHTML}</div></body></html>`);
+                                    printWindow.document.close();
+                                    setTimeout(() => { printWindow.print(); }, 500);
+                                }}>
+                                    <i className="fa-solid fa-print"></i> {(t as any).invoicePrint || 'Print'}
+                                </button>
+                                <button className="invoice-download-btn" onClick={async () => {
+                                    const invoiceEl = document.getElementById('invoice-content');
+                                    if (!invoiceEl) return;
+                                    
+                                    // Make a clone to avoid altering the UI during PDF generation
+                                    const clone = invoiceEl.cloneNode(true) as HTMLElement;
+                                    // Remove footer buttons from clone
+                                    const footer = clone.querySelector('.invoice-footer');
+                                    if (footer) footer.remove();
+                                    const closeBtn = clone.querySelector('.invoice-close-btn');
+                                    if (closeBtn) closeBtn.remove();
+                                    
+                                    // Add temporary wrapper for clean render
+                                    const wrapper = document.createElement('div');
+                                    wrapper.appendChild(clone);
+                                    wrapper.style.padding = '24px';
+                                    wrapper.style.background = '#fff';
+                                    wrapper.style.width = '800px'; // fixed width for consistent PDF output
+                                    document.body.appendChild(wrapper);
+
+                                    try {
+                                        const html2pdf = (await import('html2pdf.js')).default;
+                                        const safeSpaceTitle = invoiceBooking.SpaceTitle?.replace(/\s+/g, '_') || 'Space';
+                                        const filename = `Booking_${invoiceBooking.BookingID}_${safeSpaceTitle}.pdf`;
+                                        
+                                        await html2pdf().set({
+                                            margin: 10,
+                                            filename: filename,
+                                            image: { type: 'jpeg', quality: 0.98 },
+                                            html2canvas: { scale: 2, useCORS: true },
+                                            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                                        }).from(wrapper).save();
+                                    } catch (e) {
+                                        console.error('Failed to generate PDF', e);
+                                    } finally {
+                                        document.body.removeChild(wrapper);
+                                    }
+                                }}>
+                                    <i className="fa-solid fa-download"></i> {(t as any).invoiceDownload || 'Download'}
+                                </button>
+                                <button className="invoice-done-btn" onClick={() => setInvoiceBooking(null)}>
+                                    {(t as any).invoiceDone || 'Done'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             {showFavorites && (
                 <div className="review-modal-overlay" style={{ zIndex: 3000 }}>
                     <div className="review-modal" style={{ maxWidth: '720px', width: '92%' }}>

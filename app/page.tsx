@@ -31,6 +31,7 @@ export default async function HomePage() {
     const cookieStore = await cookies();
     const lang = (cookieStore.get('lang')?.value === 'ar' ? 'ar' : 'en') as Language;
     const t = translations[lang];
+    const token = cookieStore.get('siaa-token')?.value;
 
     return (
         <>
@@ -56,13 +57,15 @@ export default async function HomePage() {
                             gap: '20px',
                         }}
                         >
-                        <a
-                            href="/register"
-                            className="btn btn-primary btn-header"
-                            style={{ width: 'auto', flexShrink: 0, whiteSpace: 'nowrap' }}
-                        >
-                            {t.getStarted}
-                        </a>
+                        {!token && (
+                            <a
+                                href="/register"
+                                className="btn btn-primary btn-header"
+                                style={{ width: 'auto', flexShrink: 0, whiteSpace: 'nowrap' }}
+                            >
+                                {t.getStarted}
+                            </a>
+                        )}
 
                         <LanguageToggle />
                         </div>

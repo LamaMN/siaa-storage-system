@@ -197,15 +197,17 @@ export default function LanguageToggle() {
                 </div>
             )}
 
-            <a
-                href="/dashboard"
-                style={{ cursor: 'pointer', transition: 'color 0.3s', color: 'inherit' }}
-                title="Dashboard"
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#1a365d')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
-            >
-                <i className="fa-solid fa-user"></i>
-            </a>
+            {isLoggedIn && (
+                <a
+                    href="/dashboard"
+                    style={{ cursor: 'pointer', transition: 'color 0.3s', color: 'inherit' }}
+                    title="Dashboard"
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#1a365d')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = '#4a5568')}
+                >
+                    <i className="fa-solid fa-user"></i>
+                </a>
+            )}
 
             {isLoggedIn && (
                 <a

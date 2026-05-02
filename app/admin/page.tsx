@@ -598,7 +598,7 @@ export default function AdminPage() {
                             <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a365d', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #f1f5f9' }}>
                                     <i className="fa-solid fa-ticket" style={{ color: '#3b82f6', marginRight: '8px' }}></i>
-                                    {t.ticketsOverTime || 'Tickets Over Time'}
+                                    {(t as unknown as Record<string, string>).ticketsOverTime || 'Tickets Over Time'}
                                 </h3>
                                 <div style={{ height: '250px' }}>
                                     <ResponsiveContainer width="100%" height="100%">
