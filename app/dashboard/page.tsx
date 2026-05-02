@@ -78,6 +78,7 @@ interface SpaceItem {
     AvgRating?: number;
     CreatedAt?: string;
     IsFavorited?: boolean;
+    FirstImageID?: number;
 }
 
 interface Stats {
@@ -1648,27 +1649,40 @@ export default function DashboardPage() {
                             )}
 
                             {!favoritesLoading && favorites.map(space => (
-                                <div
-                                    key={space.SpaceID}
-                                    style={{
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: '12px',
-                                        padding: '12px',
-                                        marginBottom: '10px',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        gap: '12px',
-                                    }}
-                                >
-                                    <div>
-                                        <h4 style={{ margin: '0 0 4px 0', color: '#1a365d' }}>{space.Title}</h4>
-                                        <p style={{ margin: 0, color: '#718096', fontSize: '13px' }}>
-                                            {space.City} {space.AddressLine1 ? `, ${space.AddressLine1}` : ''}
-                                        </p>
-                                        <p style={{ margin: '6px 0 0 0', color: '#ff6b35', fontSize: '13px', fontWeight: 700 }}>
-                                            <i className="fa-solid fa-heart"></i> {Number(space.FavoriteCount || 0)}
-                                        </p>
-                                    </div>
+                                    <div
+                                        key={space.SpaceID}
+                                        style={{
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '12px',
+                                            padding: '12px',
+                                            marginBottom: '10px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                        }}
+                                    >
+                                        {/* Thumbnail */}
+                                        <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {space.FirstImageID ? (
+                                                <img 
+                                                    src={`/api/images/space/${space.FirstImageID}`} 
+                                                    alt={space.Title} 
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                            ) : (
+                                                <i className="fa-solid fa-image" style={{ color: '#a0aec0' }}></i>
+                                            )}
+                                        </div>
+
+                                        <div style={{ flex: 1 }}>
+                                            <h4 style={{ margin: '0 0 4px 0', color: '#1a365d', fontSize: '15px' }}>{space.Title}</h4>
+                                            <p style={{ margin: 0, color: '#718096', fontSize: '13px' }}>
+                                                {space.City} {space.AddressLine1 ? `, ${space.AddressLine1}` : ''}
+                                            </p>
+                                            <p style={{ margin: '6px 0 0 0', color: '#ff6b35', fontSize: '13px', fontWeight: 700 }}>
+                                                <i className="fa-solid fa-heart"></i> {Number(space.FavoriteCount || 0)}
+                                            </p>
+                                        </div>
 
                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                         <button

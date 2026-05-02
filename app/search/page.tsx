@@ -1450,12 +1450,25 @@ export default function SearchPage() {
                         padding: '12px',
                         marginBottom: '10px',
                         display: 'flex',
-                        justifyContent: 'space-between',
+                        alignItems: 'center',
                         gap: '12px',
                         }}
                     >
-                        <div>
-                        <h4 style={{ margin: '0 0 4px 0', color: '#1a365d' }}>{space.Title}</h4>
+                        {/* Thumbnail */}
+                        <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {space.FirstImageID ? (
+                                <img 
+                                    src={`/api/images/space/${space.FirstImageID}`} 
+                                    alt={space.Title} 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                            ) : (
+                                <i className="fa-solid fa-image" style={{ color: '#a0aec0' }}></i>
+                            )}
+                        </div>
+
+                        <div style={{ flex: 1 }}>
+                        <h4 style={{ margin: '0 0 4px 0', color: '#1a365d', fontSize: '15px' }}>{space.Title}</h4>
                         <p style={{ margin: 0, color: '#718096', fontSize: '13px' }}>
                             {space.City} {space.AddressLine1 ? `, ${space.AddressLine1}` : ''}
                         </p>

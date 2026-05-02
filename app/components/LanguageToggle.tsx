@@ -165,7 +165,7 @@ export default function LanguageToggle() {
                                     return (
                                         <div key={space.SpaceID} className="favorite-item" onClick={() => openSpaceDetails(space.SpaceID)}>
                                             <img
-                                                src={space.FirstImageID ? `/api/spaces/${space.FirstImageID}/image` : '/Media/space-placeholder.png'}
+                                                src={space.FirstImageID ? `/api/images/space/${space.FirstImageID}` : '/Media/space-placeholder.png'}
                                                 alt={space.Title}
                                                 className="favorite-item-img"
                                                 onError={(e) => { (e.target as HTMLImageElement).src = '/Media/space-placeholder.png'; }}
