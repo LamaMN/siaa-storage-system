@@ -611,7 +611,11 @@ export const translations = {
         flexiblePlans: "Flexible daily, weekly, and monthly plans",
         verifiedSecureBookings: "Verified users & secure bookings",
         smartMatchingNeeds: "Smart matching based on your needs",
-
+        ticketsOverTime: "Tickets Over Time",
+        providerContactTitle: "Provider Information",
+        providerNameLabel: "Name:",
+        providerPhoneLabel: "Phone:",
+        providerEmailLabel: "Email:",
         listMySpace: "List My Space",
         fillDetailsSiaa: "Fill in your details to get started with Si'aa.",
 
@@ -1070,7 +1074,6 @@ export const translations = {
         failedToSubmitReview: "فشل إرسال المراجعة",
         failedToSaveProfile: "فشل حفظ الملف الشخصي",
         failedToSaveSettings: "فشل حفظ الإعدادات",
-        failedToDismissBooking: "فشل إلغاء الحجز",
         welcome: "مرحباً",
         profile: "الملف الشخصي",
         mySpaces: "مساحاتي",
@@ -1146,7 +1149,8 @@ export const translations = {
         accountName: "اسم الحساب",
         notifications: "الإشعارات",
         emailNotifications: "إشعارات البريد الإلكتروني",
-        receiveEmailUpdates: "استلام التحديثات والتنبيهات عبر البريد الإلكتروني", smsNotifications: "إشعارات الرسائل النصية",
+        receiveEmailUpdates: "استلام التحديثات والتنبيهات عبر البريد الإلكتروني",
+        smsNotifications: "إشعارات الرسائل النصية",
         smsHint: "احصل على تنبيهات مهمة على هاتفك.",
         pushNotifications: "إشعارات فورية",
         getInAppAlerts: "تلقي تنبيهات وتذكيرات داخل التطبيق", communicationMethod: "طريقة الاتصال المفضلة",
@@ -1439,7 +1443,11 @@ export const translations = {
         reviewPublishDescription:
             "تحقق من معلوماتك قبل نشر إعلانك.",
 
-
+        providerContactTitle: "معلومات المزود",
+        providerNameLabel: "الاسم:",
+        providerPhoneLabel: "الهاتف:",
+        providerEmailLabel: "البريد الإلكتروني:",
+        ticketsOverTime: "التذاكر عبر الوقت",
         type:
             "النوع:",
 
