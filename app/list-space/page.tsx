@@ -237,7 +237,7 @@ export default function ListSpacePage() {
                 return;
             }
 
-            const spaceId = response.data?.spaceId;
+            const spaceId = response.spaceId;
 
             if (spaceId && formData.listingPhotos && formData.listingPhotos.length > 0) {
                 const photoForm = new FormData();
@@ -265,6 +265,29 @@ export default function ListSpacePage() {
 
     return (
         <>
+            <style>{`
+                .premium-file-input::file-selector-button {
+                    border-radius: 20px;
+                    padding: 8px 18px;
+                    background-color: rgba(255, 255, 255, 0.1);
+                    color: #718096;
+                    border: 1px solid #cbd5e0;
+                    margin-right: 15px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: 600;
+                    font-family: 'Baloo Bhaijaan 2', sans-serif;
+                    transition: all 0.3s ease;
+                }
+                .premium-file-input::file-selector-button:hover {
+                    background-color: #f7fafc;
+                    border-color: #ff6b35;
+                    color: #ff6b35;
+                }
+                .premium-file-input:hover {
+                    border-color: #ff6b35 !important;
+                }
+            `}</style>
             <header className="header">
                
                 <div className="container">
@@ -845,14 +868,15 @@ export default function ListSpacePage() {
                                                         style={{
                                                             display: 'block',
                                                             width: '100%',
-                                                            padding: '10px 14px',
-                                                            backgroundColor: 'rgba(240, 247, 255, 0.4)',
-                                                            border: '1px solid #e1e9f4',
-                                                            borderRadius: '10px',
+                                                            padding: '12px 20px',
+                                                            backgroundColor: 'rgba(240, 247, 255, 0.5)',
+                                                            border: '2px dashed #cbd5e0',
+                                                            borderRadius: '25px',
                                                             fontSize: '14px',
                                                             color: '#4a5568',
                                                             cursor: 'pointer',
-                                                            fontFamily: "'Baloo Bhaijaan 2', sans-serif"
+                                                            fontFamily: "'Baloo Bhaijaan 2', sans-serif",
+                                                            transition: 'all 0.3s ease'
                                                         }}
                                                         onChange={handleInputChange}
                                                     />
@@ -884,14 +908,15 @@ export default function ListSpacePage() {
                                                         style={{
                                                             display: 'block',
                                                             width: '100%',
-                                                            padding: '10px 14px',
-                                                            backgroundColor: 'rgba(240, 247, 255, 0.4)',
-                                                            border: '1px solid #e1e9f4',
-                                                            borderRadius: '10px',
+                                                            padding: '12px 20px',
+                                                            backgroundColor: 'rgba(240, 247, 255, 0.5)',
+                                                            border: '2px dashed #cbd5e0',
+                                                            borderRadius: '25px',
                                                             fontSize: '14px',
                                                             color: '#4a5568',
                                                             cursor: 'pointer',
-                                                            fontFamily: "'Baloo Bhaijaan 2', sans-serif"
+                                                            fontFamily: "'Baloo Bhaijaan 2', sans-serif",
+                                                            transition: 'all 0.3s ease'
                                                         }}
                                                         onChange={handleInputChange}
                                                     />
@@ -1058,7 +1083,20 @@ export default function ListSpacePage() {
                                                         name="listingVerification"
                                                         type="file"
                                                         accept=".pdf,image/*"
-                                                        className="form-input"
+                                                        className="premium-file-input"
+                                                        style={{
+                                                            display: 'block',
+                                                            width: '100%',
+                                                            padding: '12px 20px',
+                                                            backgroundColor: 'rgba(240, 247, 255, 0.5)',
+                                                            border: '2px dashed #cbd5e0',
+                                                            borderRadius: '25px',
+                                                            fontSize: '14px',
+                                                            color: '#4a5568',
+                                                            cursor: 'pointer',
+                                                            fontFamily: "'Baloo Bhaijaan 2', sans-serif",
+                                                            transition: 'all 0.3s ease'
+                                                        }}
                                                         onChange={handleInputChange}
                                                         required
                                                     />

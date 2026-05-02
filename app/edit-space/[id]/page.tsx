@@ -58,6 +58,8 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
         listingWidth: '',
         listingHeight: '',
         listingDescription: '',
+        buildingNumber: '',
+        floorNumber: '',
 
         // Step 2
         featTemperature: false,
@@ -67,6 +69,8 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
         featSecureAccess: false,
         featCCTV: false,
         featLighting: false,
+        temperatureValue: '',
+        humidityValue: '',
         prohibitedItems: '',
 
         // Step 3
@@ -76,6 +80,7 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
         pricePerDay: '',
         pricePerWeek: '',
         pricePerMonth: '',
+        maxRentalPeriod: '',
         accessNotes: '',
 
         // Step 4
@@ -134,6 +139,8 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                         listingWidth: s.Width != null ? String(s.Width) : '',
                         listingHeight: s.Height != null ? String(s.Height) : '',
                         listingDescription: s.Description || '',
+                        buildingNumber: s.BuildingNumber || '',
+                        floorNumber: s.FloorNumber != null ? String(s.FloorNumber) : '',
                         featTemperature: !!s.ClimateControlled,
                         featClimate: !!s.ClimateControlled,
                         featHumidity: false,
@@ -141,6 +148,8 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                         featSecureAccess: !!s.SecuritySystem,
                         featCCTV: !!s.CctvMonitored,
                         featLighting: false,
+                        temperatureValue: s.Temperature != null ? String(s.Temperature) : '',
+                        humidityValue: s.Humidity != null ? String(s.Humidity) : '',
                         prohibitedItems: s.Restrictions || '',
                         accessType,
                         availableFrom: s.AvailableFrom || '',
@@ -148,6 +157,7 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                         pricePerDay: s.PricePerDay != null ? String(s.PricePerDay) : '',
                         pricePerWeek: s.PricePerWeek != null ? String(s.PricePerWeek) : '',
                         pricePerMonth: s.PricePerMonth != null ? String(s.PricePerMonth) : '',
+                        maxRentalPeriod: s.MaxRentalPeriod != null ? String(s.MaxRentalPeriod) : '',
                         accessNotes: s.AccessNotes || '',
                         listingStatus: (s.Status || 'active').toLowerCase(),
                     });
@@ -227,6 +237,8 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
             width: width,
             height: parseFloat(formData.listingHeight),
             description: formData.listingDescription,
+            buildingNumber: formData.buildingNumber || undefined,
+            floorNumber: formData.floorNumber ? parseInt(formData.floorNumber) : undefined,
 
             climateControlled: formData.featClimate || formData.featTemperature,
             cctvMonitored: formData.featCCTV,
@@ -234,6 +246,12 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
             parkingAvailable: false,
             loadingAssistance: false,
             restrictions: formData.prohibitedItems,
+            temperature: (formData.featTemperature || formData.featClimate || formData.featHumidity) && formData.temperatureValue
+                ? parseFloat(formData.temperatureValue)
+                : undefined,
+            humidity: (formData.featTemperature || formData.featClimate || formData.featHumidity) && formData.humidityValue
+                ? parseFloat(formData.humidityValue)
+                : undefined,
 
             accessType: formData.accessType,
             availableFrom: formData.availableFrom,
@@ -243,6 +261,7 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
             pricePerMonth: parseFloat(formData.pricePerMonth),
             pricePerWeek: formData.pricePerWeek ? parseFloat(formData.pricePerWeek) : undefined,
             pricePerDay: formData.pricePerDay ? parseFloat(formData.pricePerDay) : undefined,
+            maxRentalPeriod: formData.maxRentalPeriod ? parseInt(formData.maxRentalPeriod) : undefined,
 
             status: formData.listingStatus,
         };
@@ -294,24 +313,44 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
 
     return (
         <>
+            <style>{`
+                .premium-file-input::file-selector-button {
+                    border-radius: 20px;
+                    padding: 8px 18px;
+                    background-color: rgba(255, 255, 255, 0.1);
+                    color: #718096;
+                    border: 1px solid #cbd5e0;
+                    margin-right: 15px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: 600;
+                    font-family: 'Baloo Bhaijaan 2', sans-serif;
+                    transition: all 0.3s ease;
+                }
+                .premium-file-input::file-selector-button:hover {
+                    background-color: #f7fafc;
+                    border-color: #ff6b35;
+                    color: #ff6b35;
+                }
+                .premium-file-input:hover {
+                    border-color: #ff6b35 !important;
+                }
+            `}</style>
             <header className="header">
-                <div className="logo">
-                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
-                        </div>
-                
-
                 <div className="container">
                     <div className="header-content">
+                        <div className="logo">
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
+                        </div>
                         <nav className="nav">
                             <a href="/dashboard">{t.dashboard}</a>
-                            <a href="#about">{t.about}</a>
-                            <a href="#features">{t.features}</a>
-                            <a href="#how-it-works">{t.howItWorks}</a>
+                            <a href="/#about">{t.about}</a>
+                            <a href="/#features">{t.features}</a>
+                            <a href="/#how-it-works">{t.howItWorks}</a>
                         </nav>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
-                         <LanguageToggle />
-                    </div>
-                        
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                            <LanguageToggle />
+                        </div>
                     </div>
                 </div>
             </header>
@@ -319,9 +358,9 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
             <section className="listing-section">
                 <div className="container">
                     {success ? (
-                        <div className="listing-confirmation" style={{ display: 'block' }}>
-                            <h3>{t.spaceUpdatedSuccessfully} ✅</h3>
-                            <p>{t.changesSavedMessage}</p>
+                        <div className="listing-confirmation" style={{ display: 'block', textAlign: 'center', padding: '40px' }}>
+                            <h3 style={{ fontSize: '28px', color: '#1a365d', marginBottom: '16px' }}>{t.spaceUpdatedSuccessfully} ✅</h3>
+                            <p style={{ fontSize: '18px', color: '#718096', marginBottom: '32px' }}>{t.changesSavedMessage}</p>
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
                                 <a
                                     href="/dashboard"
@@ -428,30 +467,31 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
 
                                                     <div className="form-group">
                                                         <label className="form-label">{t.neighborhoodJeddah} *</label>
-                                                        <select
+                                                        <input
+                                                            list="neighborhoods"
                                                             name="listingNeighborhood"
                                                             className="form-input"
+                                                            placeholder={t.neighborhoodPlaceholder}
                                                             value={formData.listingNeighborhood}
                                                             onChange={handleInputChange}
                                                             required
-                                                        >
-                                                            <option value="">{t.selectNeighborhood}</option>
-
-                                                            <option value="al-salama">{t.neighborhoodAlSalama}</option>
-                                                            <option value="al-rawdah">{t.neighborhoodAlRawdah}</option>
-                                                            <option value="al-nahda">{t.neighborhoodAlNahda}</option>
-                                                            <option value="al-andalus">{t.neighborhoodAlAndalus}</option>
-                                                            <option value="al-hamra">{t.neighborhoodAlHamra}</option>
-                                                            <option value="al-rehab">{t.neighborhoodAlRehab}</option>
-                                                            <option value="al-faisaliyah">{t.neighborhoodAlFaisaliyah}</option>
-                                                            <option value="al-naeem">{t.neighborhoodAlNaeem}</option>
-                                                            <option value="al-basateen">{t.neighborhoodAlBasateen}</option>
-                                                            <option value="al-shati">{t.neighborhoodAlShati}</option>
-                                                            <option value="al-safa">{t.neighborhoodAlSafa}</option>
-                                                            <option value="al-aziziyah">{t.neighborhoodAlAziziyah}</option>
-                                                            <option value="al-baghdadiyah">{t.neighborhoodAlBaghdadiyah}</option>
-                                                            <option value="al-balad">{t.neighborhoodAlBalad}</option>
-                                                        </select>
+                                                        />
+                                                        <datalist id="neighborhoods">
+                                                            <option value="Al-Salama" />
+                                                            <option value="Al-Rawdah" />
+                                                            <option value="Al-Nahda" />
+                                                            <option value="Al-Andalus" />
+                                                            <option value="Al-Hamra" />
+                                                            <option value="Al-Rehab" />
+                                                            <option value="Al-Faisaliyah" />
+                                                            <option value="Al-Naeem" />
+                                                            <option value="Al-Basateen" />
+                                                            <option value="Al-Shati" />
+                                                            <option value="Al-Safa" />
+                                                            <option value="Al-Aziziyah" />
+                                                            <option value="Al-Baghdadiyah" />
+                                                            <option value="Al-Balad" />
+                                                        </datalist>
                                                     </div>
                                                 </div>
 
@@ -466,6 +506,17 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                                                         onChange={handleInputChange}
                                                         required
                                                     />
+                                                </div>
+
+                                                <div className="step-row">
+                                                    <div className="form-group">
+                                                        <label className="form-label">{t.buildingNumber}</label>
+                                                        <input name="buildingNumber" type="text" className="form-input" placeholder={t.optional} value={formData.buildingNumber} onChange={handleInputChange} />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">{t.floorNumber}</label>
+                                                        <input name="floorNumber" type="number" className="form-input" placeholder={t.optional} value={formData.floorNumber} onChange={handleInputChange} />
+                                                    </div>
                                                 </div>
 
                                                 <LocationMap
@@ -513,20 +564,22 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                                                 <div className="step-row">
                                                     <div className="form-group">
                                                         <label className="form-label">{t.spaceType} *</label>
-                                                        <select
+                                                        <input
+                                                            list="spaceTypes"
                                                             name="listingType"
                                                             className="form-input"
+                                                            placeholder={t.spaceTypePlaceholder}
                                                             value={formData.listingType}
                                                             onChange={handleInputChange}
                                                             required
-                                                        >
-                                                            <option value="">{t.chooseType}</option>
-                                                            <option value="room">{t.spaceTypeRoom}</option>
-                                                            <option value="garage">{t.spaceTypeGarage}</option>
-                                                            <option value="warehouse">{t.spaceTypeWarehouse}</option>
-                                                            <option value="outdoor">{t.spaceTypeOutdoor}</option>
-                                                            <option value="Basement">{t.spaceTypeBasement}</option>
-                                                        </select>
+                                                        />
+                                                        <datalist id="spaceTypes">
+                                                            <option value="room" />
+                                                            <option value="garage" />
+                                                            <option value="warehouse" />
+                                                            <option value="outdoor" />
+                                                            <option value="Basement" />
+                                                        </datalist>
                                                     </div>
 
                                                     <div className="form-group">
@@ -624,6 +677,19 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                                                     </div>
                                                 </div>
 
+                                                {(formData.featTemperature || formData.featClimate || formData.featHumidity) && (
+                                                    <div className="step-row">
+                                                        <div className="form-group">
+                                                            <label className="form-label">{t.temperatureOptional}</label>
+                                                            <input name="temperatureValue" type="number" step="0.1" className="form-input" placeholder={t.optional} value={formData.temperatureValue} onChange={handleInputChange} />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">{t.humidityOptional}</label>
+                                                            <input name="humidityValue" type="number" step="0.1" className="form-input" placeholder={t.optional} value={formData.humidityValue} onChange={handleInputChange} />
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 <div className="form-group">
                                                     <label className="form-label">{t.prohibitedItems}</label>
                                                     <textarea
@@ -643,7 +709,7 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                                                         type="file"
                                                         accept="image/*"
                                                         multiple
-                                                        className="form-input"
+                                                        className="form-input premium-file-input"
                                                         onChange={handleInputChange}
                                                         lang={lang}
                                                     />
@@ -660,7 +726,7 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                                                 </div>
                                                 <div className="form-group">
                                                     <label className="form-label">{t.optionalVideoTour}</label>
-                                                    <input name="listingVideo" type="file" accept="video/*" className="form-input" />
+                                                    <input name="listingVideo" type="file" accept="video/*" className="form-input premium-file-input" />
                                                     <p className="step-note">{t.optionalVideoTourNote}</p>
                                                 </div>
 
@@ -720,6 +786,10 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                                                     <div className="form-group">
                                                         <label className="form-label">{t.pricePerMonth} *</label>
                                                         <input name="pricePerMonth" type="number" min="1" className="form-input" placeholder={t.required} value={formData.pricePerMonth} onChange={handleInputChange} required />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">{t.maxRentalPeriod}</label>
+                                                        <input name="maxRentalPeriod" type="number" min="1" className="form-input" placeholder={t.optional} value={formData.maxRentalPeriod} onChange={handleInputChange} />
                                                     </div>
                                                 </div>
 

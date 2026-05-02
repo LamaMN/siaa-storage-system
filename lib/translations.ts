@@ -175,6 +175,8 @@ export const translations = {
         activeSpaces: "Active Spaces",
         pendingApproval: "Pending Approval",
         failedToDismissBooking: "Failed to dismiss booking",
+        disputes: "Disputes",
+        topIssues: "Trending Issues",
 
         //confirmation page//
         //confirmation/page.tsx//
@@ -210,6 +212,7 @@ export const translations = {
         reviewMinCharacters: "Review must be at least 10 characters",
         failedToSubmitReview: "Failed to submit review",
         failedToSaveProfile: "Failed to save profile",
+        failedToSaveSettings: "Failed to save settings",
         welcome: "Welcome",
         welcomeBack: "Welcome back",
         profile: "Profile",
@@ -789,6 +792,20 @@ export const translations = {
         chatbotQ6: "How do I get paid?",
         chatbotA6: "Payments are processed securely through our platform and transferred directly to your registered bank account.",
 
+        chatbotIssueTicket: "Issue a Support Ticket",
+        ticketMustLogin: "You must be logged in to issue a support ticket.",
+        ticketAskCategory: "Please select the category of your issue:",
+        ticketAskSubject: "Please type a short subject for your ticket:",
+        ticketAskDescription: "Please describe your issue in detail:",
+        ticketSuccess: "Your ticket has been submitted successfully! Our team will review it soon.",
+        ticketFailed: "Failed to submit ticket. Please try again later.",
+        ticketSubmitting: "Submitting your ticket...",
+        typeMessage: "Type your message...",
+        categoryBooking: "Booking",
+        categoryPayment: "Payment",
+        categoryTechnical: "Technical",
+        categoryOther: "Other",
+
         // ===== 3D space visualizer =====
         visualizer3DTitle: "3D Space Visualizer",
         visualizerRoomDimensions: "Room Dimensions",
@@ -1015,6 +1032,9 @@ export const translations = {
         spaceBreakdown: "تفصيل المساحات",
         activeSpaces: "المساحات النشطة",
         pendingApproval: "بانتظار الموافقة",
+        failedToDismissBooking: "فشل في إخفاء الحجز",
+        disputes: "النزاعات",
+        topIssues: "المشاكل الشائعة",
 
         //confirmation page//
         //confirmation/page.tsx//
@@ -1049,6 +1069,7 @@ export const translations = {
         reviewMinCharacters: "يجب أن تكون المراجعة 10 أحرف على الأقل",
         failedToSubmitReview: "فشل إرسال المراجعة",
         failedToSaveProfile: "فشل حفظ الملف الشخصي",
+        failedToSaveSettings: "فشل حفظ الإعدادات",
         failedToDismissBooking: "فشل إلغاء الحجز",
         welcome: "مرحباً",
         profile: "الملف الشخصي",
@@ -1662,6 +1683,20 @@ export const translations = {
         chatbotA5: "اضغط على \"عرض مساحتك\"، أدخل التفاصيل المتعلقة بموقعك والحجم والسعر، ثم انشر إعلانك!",
         chatbotQ6: "كيف أستلم مدفوعاتي؟",
         chatbotA6: "تتم معالجة المدفوعات بشكل آمن عبر منصتنا وتُحوَّل مباشرةً إلى حسابك البنكي المسجل.",
+
+        chatbotIssueTicket: "فتح تذكرة دعم فني",
+        ticketMustLogin: "يجب عليك تسجيل الدخول لفتح تذكرة دعم فني.",
+        ticketAskCategory: "الرجاء اختيار الفئة المناسبة لمشكلتك:",
+        ticketAskSubject: "الرجاء كتابة عنوان قصير لمشكلتك:",
+        ticketAskDescription: "الرجاء كتابة تفاصيل مشكلتك:",
+        ticketSuccess: "تم تقديم تذكرتك بنجاح! سيقوم فريقنا بمراجعتها قريباً.",
+        ticketFailed: "فشل تقديم التذكرة. يرجى المحاولة مرة أخرى لاحقاً.",
+        ticketSubmitting: "جاري رفع التذكرة...",
+        typeMessage: "اكتب رسالتك...",
+        categoryBooking: "الحجوزات",
+        categoryPayment: "المدفوعات",
+        categoryTechnical: "دعم فني",
+        categoryOther: "أخرى",
 
         // ===== 3D space visualizer =====
         visualizer3DTitle: "معاينة ثلاثية الأبعاد",

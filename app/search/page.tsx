@@ -48,6 +48,11 @@ interface SpaceResult {
     FirstImageID?: number;
     FavoriteCount?: number;
     IsFavorited?: boolean;
+    ProviderFirstName?: string;
+    ProviderLastName?: string;
+    ProviderEmail?: string;
+    ProviderPhone?: string;
+    BusinessName?: string;
 }
 
 // City names in English (used as DB keys) + Arabic display names
@@ -594,19 +599,7 @@ export default function SearchPage() {
                             <a href="/#features">{t.features}</a>
                         </nav>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '6px 20px' }}>
-                            <button
-                                onClick={fetchFavorites}
-                                style={{
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                color: '#ff6b35',
-                                fontSize: '20px',
-                                }}
-                                title="Favorites"
-                            >
-                                <i className="fa-solid fa-heart"></i>
-                            </button>
+
                             <LanguageToggle />
                         </div>
                         
@@ -867,19 +860,19 @@ export default function SearchPage() {
                                         onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
                                         onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; }}
                                     >
-                                        <div className="storage-card__image" style={{ marginBottom: '10px' }}>
+                                        <div className="storage-card__image" style={{ height: '100%', minHeight: '140px', overflow: 'hidden', borderRadius: '8px' }}>
                                             {space.FirstImageID ? (
                                                 <img
                                                     src={`/api/images/space/${space.FirstImageID}`}
                                                     alt={space.Title}
                                                     onError={(e) => { e.currentTarget.src = "/Media/space-placeholder.png"; e.currentTarget.style.objectFit = 'contain'; e.currentTarget.style.padding = '30px'; e.currentTarget.style.background = 'transparent'; }}
-                                                    style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                 />
                                             ) : (
                                                 <img
                                                     src="/Media/space-placeholder.png"
                                                     alt="Space Placeholder"
-                                                    style={{ width: '100%', height: '140px', objectFit: 'contain', padding: '30px', background: 'transparent' }}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '30px', background: 'transparent' }}
                                                 />
                                             )}
                                         </div>
@@ -1146,7 +1139,41 @@ export default function SearchPage() {
                                                 <div style={{ fontSize: '16px', fontWeight: 800, color: '#ff6b35' }}>{modalSpace.PricePerMonth || '?'} <span style={{ fontSize: '12px', fontWeight: 600, color: '#a0aec0' }}>{t.sar}</span></div>
                                             </div>
                                         </div>
+
+                                        <div style={{ background: '#f8fafc', padding: '18px', borderRadius: '16px', border: '1px solid #e2e8f0', margin: '20px 0' }}>
+                                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1a365d', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <i className="fa-solid fa-user-tie" style={{ color: '#ff6b35' }}></i>
+                                                {t.providerContactTitle || 'Provider Information'}
+                                            </h3>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '11px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{t.providerNameLabel || 'Name'}</div>
+                                                    <div style={{ fontSize: '14px', color: '#2d3748', fontWeight: 600 }}>
+                                                        {modalSpace.BusinessName || `${modalSpace.ProviderFirstName} ${modalSpace.ProviderLastName}`}
+                                                    </div>
+                                                </div>
+                                                {modalSpace.ProviderPhone && (
+                                                    <div>
+                                                        <div style={{ fontSize: '11px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{t.providerPhoneLabel || 'Phone'}</div>
+                                                        <a href={`tel:${modalSpace.ProviderPhone}`} style={{ fontSize: '14px', color: '#ff6b35', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                            <i className="fa-solid fa-phone" style={{ fontSize: '11px' }}></i>
+                                                            {modalSpace.ProviderPhone}
+                                                        </a>
+                                                    </div>
+                                                )}
+                                                {modalSpace.ProviderEmail && (
+                                                    <div>
+                                                        <div style={{ fontSize: '11px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{t.providerEmailLabel || 'Email'}</div>
+                                                        <a href={`mailto:${modalSpace.ProviderEmail}`} style={{ fontSize: '14px', color: '#ff6b35', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                            <i className="fa-solid fa-envelope" style={{ fontSize: '11px' }}></i>
+                                                            {modalSpace.ProviderEmail}
+                                                        </a>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </>
+
                                 )}
 
                                 {/* Reviews View */}
@@ -1159,6 +1186,42 @@ export default function SearchPage() {
                                         >
                                             <i className="fa-solid fa-arrow-left" style={{ fontSize: '11px' }}></i> {t.backToDetails}
                                         </button>
+
+                                        <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', margin: '20px 0' }}>
+                                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a365d', margin: '0 0 12px 0' }}>
+                                                <i className="fa-solid fa-user-tie" style={{ marginRight: '8px', color: '#ff6b35' }}></i>
+                                                {t.providerContactTitle || 'Provider Information'}
+                                            </h3>
+                                            
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{t.providerNameLabel || 'Name'}</div>
+                                                    <div style={{ fontSize: '15px', color: '#2d3748', fontWeight: 600 }}>
+                                                        {modalSpace.BusinessName || `${modalSpace.ProviderFirstName} ${modalSpace.ProviderLastName}`}
+                                                    </div>
+                                                </div>
+
+                                                {modalSpace.ProviderPhone && (
+                                                    <div>
+                                                        <div style={{ fontSize: '12px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{t.providerPhoneLabel || 'Phone'}</div>
+                                                        <a href={`tel:${modalSpace.ProviderPhone}`} style={{ fontSize: '15px', color: '#ff6b35', fontWeight: 600, textDecoration: 'none' }}>
+                                                            <i className="fa-solid fa-phone" style={{ fontSize: '12px', marginRight: '6px' }}></i>
+                                                            {modalSpace.ProviderPhone}
+                                                        </a>
+                                                    </div>
+                                                )}
+
+                                                {modalSpace.ProviderEmail && (
+                                                    <div>
+                                                        <div style={{ fontSize: '12px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{t.providerEmailLabel || 'Email'}</div>
+                                                        <a href={`mailto:${modalSpace.ProviderEmail}`} style={{ fontSize: '15px', color: '#ff6b35', fontWeight: 600, textDecoration: 'none' }}>
+                                                            <i className="fa-solid fa-envelope" style={{ fontSize: '12px', marginRight: '6px' }}></i>
+                                                            {modalSpace.ProviderEmail}
+                                                        </a>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
 
                                         <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1a365d', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             {t.reviewsLabel}

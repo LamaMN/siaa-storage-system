@@ -36,7 +36,7 @@ export const createSpaceSchema = z.object({
     temperature: z.number().optional(),
     humidity: z.number().optional(),
     // Location
-    addressLine1: z.string().min(5).max(255),
+    addressLine1: z.string().min(1).max(255),
     addressLine2: z.string().max(255).optional(),
     buildingNumber: z.string().max(50).optional(),
     city: z.string().min(2).max(100),

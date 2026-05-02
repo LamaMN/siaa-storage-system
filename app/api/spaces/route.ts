@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         if (!token) return errorResponse('Unauthorized', 401);
 
         const payload = await verifyToken(token);
-        const providerId = payload.id;
+        const providerId = Number(payload.id);
         const userType = payload.userType;
 
         if (!providerId || userType !== 'provider') {
@@ -63,16 +63,21 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
+        console.log('Incoming create space request for provider:', providerId, JSON.stringify(body, null, 2));
         const parsed = createSpaceSchema.safeParse(body);
 
         if (!parsed.success) {
+            console.error('Validation failed for space creation:', parsed.error.format());
             return errorResponse(parsed.error.errors[0].message, 422);
         }
+
+        console.log('Validated data payload:', JSON.stringify(parsed.data, null, 2));
 
         const spaceId = await createNewSpace(providerId, parsed.data);
         return successResponse({ spaceId }, 'Space listed successfully!', 201);
     } catch (err) {
         console.error('Create space error:', err);
-        return errorResponse('Failed to create space', 500);
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return errorResponse(`Failed to create space: ${message}`, 500);
     }
 }

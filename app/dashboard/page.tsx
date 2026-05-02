@@ -224,6 +224,26 @@ export default function DashboardPage() {
                 } else {
                     setProfilePic('/Media/default-avatar.png');
                 }
+
+                // Populate settings
+                let notifs = { email: true, sms: true, push: true };
+                try {
+                    if (p.NotificationPreferences) {
+                        notifs = JSON.parse(p.NotificationPreferences);
+                    }
+                } catch (e) { console.error("Failed to parse notifications", e); }
+
+                setSettings({
+                    notifEmail: notifs.email !== false,
+                    notifSms: notifs.sms !== false,
+                    notifPush: notifs.push !== false,
+                    commMethod: p.PreferredCommunicationMethod || 'Email',
+                    langPref: p.PreferredLanguage || 'ar',
+                    prefLocs: p.PreferredLocations ? p.PreferredLocations.split(',').filter(Boolean) : [],
+                    iban: p.IBAN || '',
+                    bankName: p.BankName || '',
+                    accountName: p.BankAccountNumber || '', // Reusing this for accountName display if needed
+                });
             }
 
             // Load history
@@ -478,23 +498,7 @@ export default function DashboardPage() {
                             <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '6px 20px' }}>
-                            {!isProvider && (
-                                <button
-                                    onClick={fetchFavorites}
-                                    style={{
-                                        border: 'none',
-                                        background: 'transparent',
-                                        cursor: 'pointer',
-                                        color: '#ff6b35',
-                                        fontSize: '20px',
-                                    }}
-                                    title="Favorites"
-                                >
-                                    <i className="fa-solid fa-heart"></i>
-                                </button>
-                            )}
-
-                            <LanguageToggle />
+                                <LanguageToggle />
                         </div>
                     </div>
                     
@@ -1250,11 +1254,47 @@ export default function DashboardPage() {
 
                             <form className="profile-form" onSubmit={async (e) => {
                                 e.preventDefault();
+                                if (!currentUser || !token) return;
                                 setSettingsSaving(true);
-                                await new Promise(r => setTimeout(r, 600)); // Simulate save
-                                setSettingsSaving(false);
-                                setSettingsSavedMsg(true);
-                                setTimeout(() => setSettingsSavedMsg(false), 3000);
+
+                                try {
+                                    const body: any = {
+                                        notificationPreferences: JSON.stringify({
+                                            email: settings.notifEmail,
+                                            sms: settings.notifSms,
+                                            push: settings.notifPush
+                                        }),
+                                        preferredCommunicationMethod: settings.commMethod,
+                                        preferredLanguage: settings.langPref
+                                    };
+
+                                    if (isProvider) {
+                                        body.iban = settings.iban;
+                                        body.bankName = settings.bankName;
+                                        body.bankAccountNumber = settings.accountName;
+                                    } else {
+                                        body.preferredLocations = settings.prefLocs.join(',');
+                                    }
+
+                                    const res = await fetch(`/api/profile/${currentUser.userType}/${currentUser.id}`, {
+                                        method: 'PUT',
+                                        headers: authHeaders(token),
+                                        body: JSON.stringify(body)
+                                    });
+
+                                    if (res.ok) {
+                                        setSettingsSavedMsg(true);
+                                        setTimeout(() => setSettingsSavedMsg(false), 3000);
+                                    } else {
+                                        const d = await res.json();
+                                        alert(d.error || t.failedToSaveSettings);
+                                    }
+                                } catch (err) {
+                                    console.error("Save settings error:", err);
+                                    alert(t.failedToSaveSettings);
+                                } finally {
+                                    setSettingsSaving(false);
+                                }
                             }}>
 
                                 {/* Bank Information (Provider Only) */}

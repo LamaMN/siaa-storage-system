@@ -67,14 +67,14 @@ export async function createSeeker(input: CreateSeekerInput): Promise<number> {
 export async function updateSeeker(id: number, input: UpdateSeekerInput): Promise<void> {
     await execute(
         `UPDATE StorageSeekers SET
-      FirstName = ISNULL(@firstName, FirstName),
-      LastName = ISNULL(@lastName, LastName),
-      PhoneNumber = ISNULL(@phoneNumber, PhoneNumber),
-      CompanyName = ISNULL(@companyName, CompanyName),
-      PreferredLanguage = ISNULL(@preferredLanguage, PreferredLanguage),
-      PreferredLocations = ISNULL(@preferredLocations, PreferredLocations),
-      NotificationPreferences = ISNULL(@notificationPreferences, NotificationPreferences),
-      PreferredCommunicationMethod = ISNULL(@preferredCommunicationMethod, PreferredCommunicationMethod),
+      FirstName = COALESCE(@firstName, FirstName),
+      LastName = COALESCE(@lastName, LastName),
+      PhoneNumber = COALESCE(@phoneNumber, PhoneNumber),
+      CompanyName = COALESCE(@companyName, CompanyName),
+      PreferredLanguage = COALESCE(@preferredLanguage, PreferredLanguage),
+      PreferredLocations = COALESCE(@preferredLocations, PreferredLocations),
+      NotificationPreferences = COALESCE(@notificationPreferences, NotificationPreferences),
+      PreferredCommunicationMethod = COALESCE(@preferredCommunicationMethod, PreferredCommunicationMethod),
       UpdatedAt = GETDATE()
     WHERE SeekerID = @id`,
         {
@@ -168,16 +168,16 @@ export async function createProvider(input: CreateProviderInput): Promise<number
 export async function updateProvider(id: number, input: UpdateProviderInput): Promise<void> {
     await execute(
         `UPDATE StorageProviders SET
-      FirstName = ISNULL(@firstName, FirstName),
-      LastName = ISNULL(@lastName, LastName),
-      PhoneNumber = ISNULL(@phoneNumber, PhoneNumber),
-      BusinessName = ISNULL(@businessName, BusinessName),
-      BankAccountNumber = ISNULL(@bankAccountNumber, BankAccountNumber),
-      BankName = ISNULL(@bankName, BankName),
-      IBAN = ISNULL(@iban, IBAN),
-      PreferredLanguage = ISNULL(@preferredLanguage, PreferredLanguage),
-      PreferredCommunicationMethod = ISNULL(@preferredCommunicationMethod, PreferredCommunicationMethod),
-      NotificationPreferences = ISNULL(@notificationPreferences, NotificationPreferences),
+      FirstName = COALESCE(@firstName, FirstName),
+      LastName = COALESCE(@lastName, LastName),
+      PhoneNumber = COALESCE(@phoneNumber, PhoneNumber),
+      BusinessName = COALESCE(@businessName, BusinessName),
+      BankAccountNumber = COALESCE(@bankAccountNumber, BankAccountNumber),
+      BankName = COALESCE(@bankName, BankName),
+      IBAN = COALESCE(@iban, IBAN),
+      PreferredLanguage = COALESCE(@preferredLanguage, PreferredLanguage),
+      PreferredCommunicationMethod = COALESCE(@preferredCommunicationMethod, PreferredCommunicationMethod),
+      NotificationPreferences = COALESCE(@notificationPreferences, NotificationPreferences),
       UpdatedAt = GETDATE()
     WHERE ProviderID = @id`,
         {

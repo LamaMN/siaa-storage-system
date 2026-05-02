@@ -17,13 +17,14 @@ export async function findSpaceById(id: number): Promise<SpaceWithDetails | null
   return queryOne<SpaceWithDetails>(
     `SELECT
       s.*,
-      l.AddressLine1, l.AddressLine2, l.City, l.Region, l.PostalCode,
+      l.AddressLine1, l.AddressLine2, l.BuildingNumber, l.City, l.Region, l.PostalCode,
       l.Country, l.Latitude, l.Longitude, l.Landmark,
       p.FirstName AS ProviderFirstName, p.LastName AS ProviderLastName,
       p.Email AS ProviderEmail, p.PhoneNumber AS ProviderPhone,
       p.BusinessName,
       sf.ClimateControlled, sf.SecuritySystem, sf.CCTVMonitored,
       sf.ParkingAvailable, sf.LoadingAssistance, sf.AccessType, sf.Restrictions,
+      sf.Temperature, sf.Humidity,
       ISNULL(rv.AvgRating, 0) AS AvgRating,
       ISNULL(rv.TotalReviews, 0) AS TotalReviews,
       ISNULL(bk.ActiveBookings, 0) AS ActiveBookings,
@@ -49,7 +50,12 @@ export async function findSpaceById(id: number): Promise<SpaceWithDetails | null
       GROUP BY SpaceID
     ) bk ON bk.SpaceID = s.SpaceID
     LEFT JOIN (
-      SELECT SpaceID, MIN(ImageID) AS FirstImageID FROM SpaceImages GROUP BY SpaceID
+      SELECT SpaceID, ImageID AS FirstImageID 
+      FROM (
+        SELECT SpaceID, ImageID, ROW_NUMBER() OVER(PARTITION BY SpaceID ORDER BY ImageOrder ASC, ImageID ASC) as rn
+        FROM SpaceImages
+      ) t
+      WHERE rn = 1
     ) img ON img.SpaceID = s.SpaceID
     WHERE s.SpaceID = @id`,
     { id }
@@ -92,6 +98,7 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
       s.MinRentalPeriod, s.CreatedAt, s.UpdatedAt,
       l.AddressLine1, l.AddressLine2, l.City, l.Region AS Neighborhood, l.Latitude, l.Longitude, l.Landmark,
       p.FirstName AS ProviderFirstName, p.LastName AS ProviderLastName,
+      p.Email AS ProviderEmail, p.PhoneNumber AS ProviderPhone,
       p.BusinessName,
       sf.ClimateControlled, sf.SecuritySystem, sf.CCTVMonitored,
       sf.ParkingAvailable, sf.LoadingAssistance, sf.AccessType,
@@ -124,7 +131,12 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
       GROUP BY b.SpaceID
     ) rv ON rv.SpaceID = s.SpaceID
     LEFT JOIN (
-      SELECT SpaceID, MIN(ImageID) AS FirstImageID FROM SpaceImages GROUP BY SpaceID
+      SELECT SpaceID, ImageID AS FirstImageID 
+      FROM (
+        SELECT SpaceID, ImageID, ROW_NUMBER() OVER(PARTITION BY SpaceID ORDER BY ImageOrder ASC, ImageID ASC) as rn
+        FROM SpaceImages
+      ) t
+      WHERE rn = 1
     ) img ON img.SpaceID = s.SpaceID
     WHERE s.Status = 'Active' AND s.IsAvailable = 1
       AND (@citySearch IS NULL OR l.City LIKE @citySearch)
@@ -326,28 +338,88 @@ export async function updateSpace(id: number, input: UpdateSpaceInput): Promise<
   if (Object.keys(input).length === 0) return;
 
   await execute(
-    `UPDATE StorageSpaces SET
-      Title = ISNULL(@title, Title),
-      Description = ISNULL(@description, Description),
-      SpaceType = ISNULL(@spaceType, SpaceType),
-      Size = ISNULL(@size, Size),
-      PricePerMonth = ISNULL(@pricePerMonth, PricePerMonth),
-      PricePerWeek = ISNULL(@pricePerWeek, PricePerWeek),
-      PricePerDay = ISNULL(@pricePerDay, PricePerDay),
-      IsAvailable = ISNULL(@isAvailable, IsAvailable),
+    `BEGIN TRANSACTION;
+
+    -- Update StorageSpaces
+    UPDATE StorageSpaces SET
+      Title = COALESCE(@title, Title),
+      Description = COALESCE(@description, Description),
+      SpaceType = COALESCE(@spaceType, SpaceType),
+      Size = COALESCE(@size, Size),
+      Height = COALESCE(@height, Height),
+      Width = COALESCE(@width, Width),
+      Length = COALESCE(@length, Length),
+      PricePerMonth = COALESCE(@pricePerMonth, PricePerMonth),
+      PricePerWeek = COALESCE(@pricePerWeek, PricePerWeek),
+      PricePerDay = COALESCE(@pricePerDay, PricePerDay),
+      MinRentalPeriod = COALESCE(@minRentalPeriod, MinRentalPeriod),
+      MaxRentalPeriod = COALESCE(@maxRentalPeriod, MaxRentalPeriod),
+      FloorNumber = COALESCE(@floorNumber, FloorNumber),
+      IsAvailable = COALESCE(@isAvailable, IsAvailable),
+      Status = COALESCE(@status, Status),
       UpdatedAt = GETDATE()
-    WHERE SpaceID = @id AND ProviderID = @providerId`,
+    WHERE SpaceID = @id;
+
+    -- Update Locations
+    UPDATE Locations SET
+      AddressLine1 = COALESCE(@addressLine1, AddressLine1),
+      AddressLine2 = COALESCE(@addressLine2, AddressLine2),
+      BuildingNumber = COALESCE(@buildingNumber, BuildingNumber),
+      City = COALESCE(@city, City),
+      Region = COALESCE(@region, Region),
+      Latitude = COALESCE(@latitude, Latitude),
+      Longitude = COALESCE(@longitude, Longitude),
+      Landmark = COALESCE(@landmark, Landmark)
+    WHERE SpaceID = @id;
+
+    -- Update SpaceFeatures
+    UPDATE SpaceFeatures SET
+      ClimateControlled = COALESCE(@climateControlled, ClimateControlled),
+      SecuritySystem = COALESCE(@securitySystem, SecuritySystem),
+      CCTVMonitored = COALESCE(@cctvMonitored, CCTVMonitored),
+      ParkingAvailable = COALESCE(@parkingAvailable, ParkingAvailable),
+      LoadingAssistance = COALESCE(@loadingAssistance, LoadingAssistance),
+      AccessType = COALESCE(@accessType, AccessType),
+      Restrictions = COALESCE(@restrictions, Restrictions),
+      Temperature = COALESCE(@temperature, Temperature),
+      Humidity = COALESCE(@humidity, Humidity)
+    WHERE SpaceID = @id;
+
+    COMMIT TRANSACTION;`,
     {
       id,
-      providerId: null, // caller should pass this from JWT
       title: input.title || null,
       description: input.description || null,
       spaceType: input.spaceType || null,
       size: input.size || null,
+      height: input.height || null,
+      width: input.width || null,
+      length: input.length || null,
       pricePerMonth: input.pricePerMonth || null,
       pricePerWeek: input.pricePerWeek || null,
       pricePerDay: input.pricePerDay || null,
+      minRentalPeriod: input.minRentalPeriod || null,
+      maxRentalPeriod: input.maxRentalPeriod || null,
+      floorNumber: input.floorNumber || null,
       isAvailable: input.isAvailable !== undefined ? (input.isAvailable ? 1 : 0) : null,
+      status: input.status || null,
+      addressLine1: input.addressLine1 || null,
+      addressLine2: input.addressLine2 || null,
+      buildingNumber: input.buildingNumber || null,
+      city: input.city || null,
+      region: input.region || null,
+      latitude: input.latitude || null,
+      longitude: input.longitude || null,
+      landmark: input.landmark || null,
+      climateControlled: input.climateControlled !== undefined ? (input.climateControlled ? 1 : 0) : null,
+      securitySystem: input.securitySystem !== undefined ? (input.securitySystem ? 1 : 0) : null,
+      cctvMonitored: input.cctvMonitored !== undefined ? (input.cctvMonitored ? 1 : 0) : null,
+      parkingAvailable: input.parkingAvailable !== undefined ? (input.parkingAvailable ? 1 : 0) : null,
+      loadingAssistance: input.loadingAssistance !== undefined ? (input.loadingAssistance ? 1 : 0) : null,
+      accessType: input.accessType || null,
+      restrictions: input.restrictions || null,
+      temperature: input.temperature || null,
+      humidity: input.humidity || null,
     }
   );
 }
@@ -389,7 +461,12 @@ export async function findAllPendingSpaces(): Promise<SpaceWithDetails[]> {
     LEFT JOIN Locations l ON l.SpaceID = s.SpaceID
     LEFT JOIN StorageProviders p ON p.ProviderID = s.ProviderID
     LEFT JOIN (
-      SELECT SpaceID, MIN(ImageID) AS FirstImageID FROM SpaceImages GROUP BY SpaceID
+      SELECT SpaceID, ImageID AS FirstImageID 
+      FROM (
+        SELECT SpaceID, ImageID, ROW_NUMBER() OVER(PARTITION BY SpaceID ORDER BY ImageOrder ASC, ImageID ASC) as rn
+        FROM SpaceImages
+      ) t
+      WHERE rn = 1
     ) img ON img.SpaceID = s.SpaceID
     WHERE s.Status = 'Pending'
     ORDER BY s.CreatedAt DESC`
@@ -407,6 +484,8 @@ export async function getAdminStatistics(): Promise<{
   totalSeekers: number; totalProviders: number;
   totalSpaces: number; pendingSpaces: number; activeSpaces: number;
   totalBookings: number; totalRevenue: number;
+  revenueOverTime: { date: string; value: number }[];
+  ticketsOverTime: { date: string; value: number }[];
 }> {
   const row = await queryOne<{
     totalSeekers: number; totalProviders: number;
@@ -422,10 +501,34 @@ export async function getAdminStatistics(): Promise<{
       (SELECT COUNT(*) FROM Bookings) AS totalBookings,
       (SELECT ISNULL(SUM(CASE WHEN BookingStatus IN ('Active','Completed') THEN TotalAmount ELSE 0 END), 0) FROM Bookings) AS totalRevenue`
   );
-  return row || {
-    totalSeekers: 0, totalProviders: 0,
-    totalSpaces: 0, pendingSpaces: 0, activeSpaces: 0,
-    totalBookings: 0, totalRevenue: 0,
+
+  const revenueOverTime = await query<{ date: string; value: number }>(
+    `SELECT FORMAT(CreatedAt, 'yyyy-MM') as [date], ISNULL(SUM(CASE WHEN BookingStatus IN ('Active','Completed') THEN TotalAmount ELSE 0 END), 0) as value 
+     FROM Bookings 
+     GROUP BY FORMAT(CreatedAt, 'yyyy-MM') 
+     ORDER BY [date]`
+  );
+
+  let ticketsOverTime: { date: string; value: number }[] = [];
+  try {
+      ticketsOverTime = await query<{ date: string; value: number }>(
+        `SELECT FORMAT(CreatedAt, 'yyyy-MM') as [date], COUNT(*) as value 
+         FROM SupportTickets 
+         GROUP BY FORMAT(CreatedAt, 'yyyy-MM') 
+         ORDER BY [date]`
+      );
+  } catch (e) {
+      console.error('SupportTickets might not exist or error in ticketsOverTime query', e);
+  }
+
+  return {
+    ...(row || {
+      totalSeekers: 0, totalProviders: 0,
+      totalSpaces: 0, pendingSpaces: 0, activeSpaces: 0,
+      totalBookings: 0, totalRevenue: 0,
+    }),
+    revenueOverTime,
+    ticketsOverTime
   };
 }
 
@@ -481,14 +584,22 @@ export async function getSeekerFavorites(seekerId: number) {
       s.PricePerMonth, s.PricePerWeek, s.PricePerDay,
       ISNULL(s.FavoriteCount, 0) AS FavoriteCount,
       l.City, l.AddressLine1,
-      img.FirstImageID
+      img.FirstImageID,
+      p.BusinessName,
+      sf.ClimateControlled, sf.SecuritySystem, sf.CCTVMonitored, 
+      sf.ParkingAvailable, sf.LoadingAssistance, sf.AccessType
     FROM Favorites f
     JOIN StorageSpaces s ON s.SpaceID = f.SpaceID
     LEFT JOIN Locations l ON l.SpaceID = s.SpaceID
+    LEFT JOIN StorageProviders p ON p.ProviderID = s.ProviderID
+    LEFT JOIN SpaceFeatures sf ON sf.SpaceID = s.SpaceID
     LEFT JOIN (
-      SELECT SpaceID, MIN(ImageID) AS FirstImageID
-      FROM SpaceImages
-      GROUP BY SpaceID
+      SELECT SpaceID, ImageID AS FirstImageID 
+      FROM (
+        SELECT SpaceID, ImageID, ROW_NUMBER() OVER(PARTITION BY SpaceID ORDER BY ImageOrder ASC, ImageID ASC) as rn
+        FROM SpaceImages
+      ) t
+      WHERE rn = 1
     ) img ON img.SpaceID = s.SpaceID
     WHERE f.SeekerID = @seekerId
     ORDER BY f.CreatedAt DESC

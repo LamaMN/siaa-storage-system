@@ -1,8 +1,27 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Loader from '@/components/Loader';
 import LanguageToggle from '@/app/components/LanguageToggle';
 import { translations, type Language } from '@/lib/translations';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+
+function getTopIssues(tickets: SupportTicket[]): string[] {
+    const stopWords = new Set(['the', 'and', 'is', 'to', 'for', 'a', 'in', 'of', 'i', 'was', 'my', 'it', 'on', 'with', 'at', 'this', 'that', 'from', 'في', 'من', 'عن', 'على', 'و', 'ان', 'أن', 'الى', 'إلى']);
+    const wordCounts: Record<string, number> = {};
+    tickets.forEach(t => {
+        const words = (t.Description + " " + t.Subject).toLowerCase().match(/\p{L}+/gu) || [];
+        words.forEach(w => {
+            if (w.length > 2 && !stopWords.has(w)) {
+                wordCounts[w] = (wordCounts[w] || 0) + 1;
+            }
+        });
+    });
+    return Object.entries(wordCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(x => x[0]);
+}
+
 interface SpaceItem {
     SpaceID: number;
     Title: string;
@@ -28,6 +47,22 @@ interface AdminStats {
     activeSpaces: number;
     totalBookings: number;
     totalRevenue: number;
+    revenueOverTime?: { date: string; value: number }[];
+    ticketsOverTime?: { date: string; value: number }[];
+}
+
+interface SupportTicket {
+    TicketID: number;
+    ProviderFirstName?: string;
+    ProviderLastName?: string;
+    SeekerFirstName?: string;
+    SeekerLastName?: string;
+    Category: string;
+    Subject: string;
+    Description: string;
+    Status: string;
+    Priority: string;
+    CreatedAt: string;
 }
 
 function formatDate(d?: string) {
@@ -49,6 +84,7 @@ export default function AdminPage() {
     const [activeSection, setActiveSection] = useState('spacesSection');
     const [pendingSpaces, setPendingSpaces] = useState<SpaceItem[]>([]);
     const [stats, setStats] = useState<AdminStats | null>(null);
+    const [tickets, setTickets] = useState<SupportTicket[]>([]);
     const [loading, setLoading] = useState(true);
     const [lang, setLang] = useState<Language>('en');
     const t = translations[lang];
@@ -86,9 +122,10 @@ export default function AdminPage() {
     async function loadData(t: string) {
         setLoading(true);
         try {
-            const [spacesRes, statsRes] = await Promise.all([
+            const [spacesRes, statsRes, ticketsRes] = await Promise.all([
                 fetch('/api/admin/spaces', { headers: authHeaders(t) }),
                 fetch('/api/admin/stats', { headers: authHeaders(t) }),
+                fetch('/api/admin/tickets', { headers: authHeaders(t) }),
             ]);
 
             if (spacesRes.ok) {
@@ -98,6 +135,10 @@ export default function AdminPage() {
             if (statsRes.ok) {
                 const data = await statsRes.json();
                 setStats(data.statistics || null);
+            }
+            if (ticketsRes.ok) {
+                const data = await ticketsRes.json();
+                setTickets(data.tickets || []);
             }
         } finally {
             setLoading(false);
@@ -137,30 +178,14 @@ export default function AdminPage() {
     return (
         <>
             <header className="header">
-                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
-                    <LanguageToggle />
-                </div>
                 <div className="container">
                     <div className="header-content">
-
-                        {/* Navigation */}
-                        <nav className="nav">
-                            <a href="/dashboard">{t.dashboard}</a>
-                            <a href="/#about">{t.about}</a>
-                            <a href="/#features">{t.features}</a>
-                            <a href="/#how-it-works">{t.howItWorks}</a>
-                        </nav>
-
-                        {/* Logo */}
                         <div className="logo">
-                            <img
-                                src="/Media/Logo.png"
-                                alt={t.logoAlt}
-                                className="logo-img"
-                            />
+                            <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
-
-
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
+                            <LanguageToggle />
+                        </div>
                     </div>
                 </div>
             </header>
@@ -191,6 +216,18 @@ export default function AdminPage() {
                     >
                         <i className="fa-solid fa-chart-line"></i>
                         {t.statistics}
+                    </a>
+
+                    <a
+                        href="#"
+                        className={`sideBar-link ${activeSection === 'disputesSection' ? 'is-active' : ''}`}
+                        onClick={e => {
+                            e.preventDefault();
+                            setActiveSection('disputesSection');
+                        }}
+                    >
+                        <i className="fa-solid fa-scale-balanced"></i>
+                        Disputes
                     </a>
 
                     <a
@@ -323,10 +360,9 @@ export default function AdminPage() {
                                                             )
                                                         }
                                                         style={{
-                                                            background:
-                                                                'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
-                                                            boxShadow:
-                                                                '0 4px 12px rgba(16,185,129,0.25)'
+                                                            background: '#1a365d',
+                                                            color: '#fff',
+                                                            boxShadow: '0 4px 12px rgba(26,54,93,0.25)'
                                                         }}
                                                     >
                                                         <i className="fa-solid fa-check"></i>
@@ -382,10 +418,8 @@ export default function AdminPage() {
                                     <div
                                         className="stat-icon"
                                         style={{
-                                            background:
-                                                'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)',
-                                            boxShadow:
-                                                '0 4px 12px rgba(59,130,246,0.25)'
+                                            background: '#3b82f6',
+                                            boxShadow: '0 4px 12px rgba(59,130,246,0.25)'
                                         }}
                                     >
                                         <i className="fa-solid fa-users"></i>
@@ -405,7 +439,7 @@ export default function AdminPage() {
 
                                 {/* Total Spaces */}
                                 <div className="stat-card">
-                                    <div className="stat-icon">
+                                    <div className="stat-icon" style={{ background: '#ff6b35', boxShadow: '0 4px 12px rgba(255,107,53,0.25)', color: '#fff' }}>
                                         <i className="fa-solid fa-box"></i>
                                     </div>
 
@@ -425,10 +459,8 @@ export default function AdminPage() {
                                     <div
                                         className="stat-icon"
                                         style={{
-                                            background:
-                                                'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
-                                            boxShadow:
-                                                '0 4px 12px rgba(16,185,129,0.25)'
+                                            background: '#3b82f6',
+                                            boxShadow: '0 4px 12px rgba(59,130,246,0.25)'
                                         }}
                                     >
                                         <i className="fa-solid fa-calendar-check"></i>
@@ -450,10 +482,8 @@ export default function AdminPage() {
                                     <div
                                         className="stat-icon"
                                         style={{
-                                            background:
-                                                'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
-                                            boxShadow:
-                                                '0 4px 12px rgba(139,92,246,0.25)'
+                                            background: '#ff6b35',
+                                            boxShadow: '0 4px 12px rgba(255,107,53,0.25)'
                                         }}
                                     >
                                         <i className="fa-solid fa-chart-line"></i>
@@ -474,64 +504,179 @@ export default function AdminPage() {
 
                             </div>
 
-                        </section>
-
-                        {/* Detailed breakdown */}
+                        {/* Detailed breakdown charts */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '2rem' }}>
-                            <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>
+                            <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a365d', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #f1f5f9' }}>
                                     <i className="fa-solid fa-users" style={{ color: '#3b82f6', marginRight: '8px' }}></i>
                                     {t.userBreakdown}
                                 </h3>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f7fafc', borderRadius: '10px' }}>
-                                        <span style={{ color: '#4a5568', fontSize: '14px', fontWeight: 500 }}>
-                                            {t.storageSeekers}
-                                        </span>
-                                        <span style={{ color: '#1a365d', fontSize: '18px', fontWeight: 700 }}>
-                                            {stats?.totalSeekers || 0}
-                                        </span>
+                                <div style={{ flex: 1, minHeight: '200px' }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={[
+                                                    { name: t.storageSeekers, value: stats?.totalSeekers || 0 },
+                                                    { name: t.storageProviders, value: stats?.totalProviders || 0 }
+                                                ]}
+                                                cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={5} dataKey="value"
+                                            >
+                                                <Cell fill="#1a365d" />
+                                                <Cell fill="#3b82f6" />
+                                            </Pie>
+                                            <Tooltip />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '12px', color: '#4a5568' }}>
+                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#1a365d' }}></div>
+                                        {t.storageSeekers} ({stats?.totalSeekers || 0})
                                     </div>
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f7fafc', borderRadius: '10px' }}>
-                                        <span style={{ color: '#4a5568', fontSize: '14px', fontWeight: 500 }}>
-                                            {t.storageProviders}
-                                        </span>
-                                        <span style={{ color: '#1a365d', fontSize: '18px', fontWeight: 700 }}>
-                                            {stats?.totalProviders || 0}
-                                        </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '12px', color: '#4a5568' }}>
+                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#3b82f6' }}></div>
+                                        {t.storageProviders} ({stats?.totalProviders || 0})
                                     </div>
+                                </div>
+                            </div>
+
+                            <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a365d', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #f1f5f9' }}>
+                                    <i className="fa-solid fa-box" style={{ color: '#ff6b35', marginRight: '8px' }}></i>
+                                    {t.spaceBreakdown}
+                                </h3>
+                                <div style={{ flex: 1, minHeight: '200px' }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={[
+                                                    { name: t.activeSpaces, value: stats?.activeSpaces || 0 },
+                                                    { name: t.pendingApproval, value: stats?.pendingSpaces || 0 }
+                                                ]}
+                                                cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={5} dataKey="value"
+                                            >
+                                                <Cell fill="#ff6b35" />
+                                                <Cell fill="#fbbf24" />
+                                            </Pie>
+                                            <Tooltip />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '12px', color: '#4a5568' }}>
+                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff6b35' }}></div>
+                                        {t.activeSpaces} ({stats?.activeSpaces || 0})
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '12px', color: '#4a5568' }}>
+                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fbbf24' }}></div>
+                                        {t.pendingApproval} ({stats?.pendingSpaces || 0})
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Line Charts */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '2rem' }}>
+                            <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a365d', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #f1f5f9' }}>
+                                    <i className="fa-solid fa-chart-line" style={{ color: '#ff6b35', marginRight: '8px' }}></i>
+                                    {t.revenueOverTime || 'Revenue Over Time'}
+                                </h3>
+                                <div style={{ height: '250px' }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={stats?.revenueOverTime || []}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis dataKey="date" tick={{fontSize: 12, fill: '#718096'}} axisLine={false} tickLine={false} />
+                                            <YAxis tick={{fontSize: 12, fill: '#718096'}} axisLine={false} tickLine={false} width={40} />
+                                            <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+                                            <Line type="monotone" dataKey="value" stroke="#ff6b35" strokeWidth={3} dot={{r: 4, fill: '#ff6b35', strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 6}} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
                                 </div>
                             </div>
 
                             <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a365d', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #f1f5f9' }}>
-                                    <i className="fa-solid fa-box" style={{ color: '#ff6b35', marginRight: '8px' }}></i>
-                                    {t.spaceBreakdown}
+                                    <i className="fa-solid fa-ticket" style={{ color: '#3b82f6', marginRight: '8px' }}></i>
+                                    {t.ticketsOverTime || 'Tickets Over Time'}
                                 </h3>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f7fafc', borderRadius: '10px' }}>
-                                        <span style={{ color: '#4a5568', fontSize: '14px', fontWeight: 500 }}>
-                                            {t.activeSpaces}
-                                        </span>
-                                        <span style={{ color: '#10b981', fontSize: '18px', fontWeight: 700 }}>
-                                            {stats?.activeSpaces || 0}
-                                        </span>
-                                    </div>
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#fff3cd', borderRadius: '10px' }}>
-                                        <span style={{ color: '#856404', fontSize: '14px', fontWeight: 500 }}>
-                                            {t.pendingApproval}
-                                        </span>
-                                        <span style={{ color: '#856404', fontSize: '18px', fontWeight: 700 }}>
-                                            {stats?.pendingSpaces || 0}
-                                        </span>
-                                    </div>
+                                <div style={{ height: '250px' }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={stats?.ticketsOverTime || []}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis dataKey="date" tick={{fontSize: 12, fill: '#718096'}} axisLine={false} tickLine={false} />
+                                            <YAxis tick={{fontSize: 12, fill: '#718096'}} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+                                            <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+                                            <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 6}} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
                                 </div>
                             </div>
                         </div>
+                        </section>
+
+                        {/* Disputes Section */}
+                        <section
+                            id="disputesSection"
+                            className={`dashboard-section ${activeSection === 'disputesSection' ? 'is-active' : ''}`}
+                        >
+                            <h2 className="section-title">
+                                {t.disputes || 'Support Tickets'}
+                            </h2>
+
+                            {tickets.length > 0 && getTopIssues(tickets).length > 0 && (
+                                <div style={{ background: 'transparent', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <i className="fa-solid fa-tag" style={{ color: '#94a3b8', fontSize: '14px' }}></i>
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        {getTopIssues(tickets).map(word => (
+                                            <span key={word} style={{ color: '#475569', fontSize: '12px', fontWeight: 500 }}>
+                                                #{word}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {tickets.length === 0 ? (
+                                <p className="history-empty">
+                                    No support tickets currently.
+                                </p>
+                            ) : (
+                                <ul className="history-list">
+                                    {tickets.map(ticket => (
+                                        <li key={ticket.TicketID} className="history-item">
+                                            <div className="history-item-header">
+                                                <h3 className="history-item-title">
+                                                    {ticket.Subject}
+                                                </h3>
+                                                <span className={`history-item-badge ${ticket.Status === 'Open' ? 'status-pending' : ticket.Status === 'Resolved' ? 'status-completed' : 'status-in-progress'}`} style={ticket.Status === 'Resolved' ? {background: '#e6ffed', color: '#10b981', borderColor: '#10b981'} : ticket.Status === 'In Progress' ? {background: '#fff3cd', color: '#856404', borderColor: '#856404'} : {}}>
+                                                    {ticket.Status}
+                                                </span>
+                                            </div>
+                                            <div className="history-item-details">
+                                                <p style={{ fontWeight: '500', color: '#1a365d' }}>
+                                                    <i className="fa-solid fa-tag"></i> Category: {ticket.Category}
+                                                </p>
+                                                <p style={{ color: '#4a5568', marginTop: '0.5rem', marginBottom: '0.5rem', background: '#f7fafc', padding: '1rem', borderRadius: '8px', fontStyle: 'italic' }}>
+                                                    "{ticket.Description}"
+                                                </p>
+                                                <p>
+                                                    <i className="fa-solid fa-user"></i> Submitted By: {ticket.ProviderFirstName ? `${ticket.ProviderFirstName} ${ticket.ProviderLastName} (Provider)` : `${ticket.SeekerFirstName} ${ticket.SeekerLastName} (Seeker)`}
+                                                </p>
+                                                <p>
+                                                    <i className="fa-solid fa-triangle-exclamation"></i> Priority: {ticket.Priority}
+                                                </p>
+                                            </div>
+                                            <div className="history-item-footer">
+                                                <span className="history-item-date">
+                                                    Submitted: {formatDate(ticket.CreatedAt)}
+                                                </span>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </section>
 
 
                     </div>

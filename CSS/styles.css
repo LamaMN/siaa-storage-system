@@ -51,6 +51,11 @@ body {
     gap: 30px;
 }
 
+/* Hide navigation options when the user is signed in */
+body.user-logged-in .nav {
+    display: none !important;
+}
+
 .nav a {
     color: #4a5568;
     text-decoration: none;
@@ -60,6 +65,137 @@ body {
 
 .nav a:hover {
     color: #1a365d;
+}
+
+.favorites-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.favorites-dropdown {
+    position: absolute;
+    top: 100%;
+    right: -10px;
+    margin-top: 20px;
+    width: 340px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    z-index: 1000;
+    max-height: 450px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+}
+
+html[dir="rtl"] .favorites-dropdown {
+    right: auto;
+    left: -10px;
+    text-align: right;
+}
+
+.favorites-dropdown-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 600;
+    color: #2d3748;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+}
+
+.favorite-item {
+    display: flex;
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+    gap: 12px;
+}
+
+.favorite-item:hover {
+    background: #f8fafc;
+}
+
+.favorite-item-img {
+    width: 70px;
+    height: 70px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.favorite-item-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.favorite-item-title {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 1rem;
+    margin: 0;
+    padding-right: 25px; /* space for heart */
+}
+
+html[dir="rtl"] .favorite-item-title {
+    padding-right: 0;
+    padding-left: 25px;
+}
+
+.favorite-item-company {
+    font-size: 0.8rem;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.favorite-item-details {
+    font-size: 0.85rem;
+    color: #718096;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.favorite-item-features {
+    font-size: 0.75rem;
+    color: #38b2ac;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+.favorite-item-remove {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    color: #e53e3e;
+    font-size: 1.1rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    transition: transform 0.2s;
+}
+
+html[dir="rtl"] .favorite-item-remove {
+    right: auto;
+    left: 16px;
+}
+
+.favorite-item-remove:hover {
+    transform: scale(1.2);
+}
+
+.favorites-empty {
+    padding: 30px 20px;
+    text-align: center;
+    color: #a0aec0;
+    font-size: 0.95rem;
 }
 
 /* the buttons */

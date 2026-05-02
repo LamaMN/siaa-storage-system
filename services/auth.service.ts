@@ -134,7 +134,7 @@ export async function login(
 ): Promise<{ token: string; user: object; isFirstLogin: boolean }> {
 
     // 0. Try auth as Admin (hardcoded credentials — no DB table)
-    if (data.email === 'Admin' && data.password === 'Admin@123') {
+    if (data.email === 'admin@siaa.sa' && data.password === 'Admin@123') {
         const payload: TokenPayload = {
             id: 0,
             email: 'admin@siaa.sa',

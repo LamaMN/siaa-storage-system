@@ -30,7 +30,9 @@ export default async function RootLayout({
 }>) {
     const cookieStore = await cookies();
     const lang = cookieStore.get('lang')?.value === 'ar' ? 'ar' : 'en';
+    const token = cookieStore.get('siaa-token')?.value;
     const dir = lang === 'ar' ? 'rtl' : 'ltr';
+    const bodyClass = token ? 'user-logged-in' : '';
 
     return (
         <html lang={lang} dir={dir}>
@@ -46,7 +48,7 @@ export default async function RootLayout({
                     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
                 />
             </head>
-            <body suppressHydrationWarning>
+            <body suppressHydrationWarning className={bodyClass}>
                 {children}
                 <Chatbot />
             </body>
