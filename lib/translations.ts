@@ -73,7 +73,7 @@ export const translations = {
         feature1Title: "Peer-to-Peer Storage",
         feature1Desc: "Utilize unused rooms, garages, basements.",
 
-        feature2Title: "AI Smart Matching",
+        feature2Title: "Smart Matching Based on Your Needs",
         feature2Desc: "Recommends ideal space based on size, budget, and environment.",
 
         feature3Title: "Space Visualization",
@@ -904,7 +904,7 @@ export const translations = {
         feature1Title: "تخزين بين الأفراد",
         feature1Desc: "استفد من الغرف أو المرائب أو الأقبية غير المستخدمة.",
 
-        feature2Title: "مطابقة ذكية بالذكاء الاصطناعي",
+        feature2Title: "مطابقة ذكية حسب احتياجاتك",
         feature2Desc: "يقترح المساحة المثالية حسب الحجم والميزانية والبيئة.",
 
         feature3Title: "تصور المساحة",

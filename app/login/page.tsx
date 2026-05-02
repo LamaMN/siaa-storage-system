@@ -11,9 +11,13 @@ function getCurrentLang(): Language {
 
 export default function LoginPage() {
 
-    const [lang, setLang] = useState<Language>(() => getCurrentLang());
-    const t = translations[lang];
+    const [lang, setLang] = useState<Language>('en');
 
+    useEffect(() => {
+        setLang(getCurrentLang());
+    }, []);
+
+    const t = translations[lang];
     useEffect(() => {
         document.documentElement.lang = lang;
         document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -67,7 +71,7 @@ export default function LoginPage() {
         <>
             <header className="header">
 
-                
+
 
                 <div className="container">
                     <div className="header-content">
