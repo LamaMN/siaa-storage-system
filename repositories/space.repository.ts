@@ -533,6 +533,44 @@ export async function getAdminStatistics(): Promise<{
 }
 
 // ============================================================
+// PROVIDER PUBLIC PROFILE
+// ============================================================
+
+export async function getProviderPublicProfile(providerId: number): Promise<{
+  FirstName: string; LastName: string; Email: string; PhoneNumber: string;
+  BusinessName?: string; HasProfilePicture: boolean;
+  AvgRating: number; TotalReviews: number; TotalSpaces: number;
+} | null> {
+  return queryOne<{
+    FirstName: string; LastName: string; Email: string; PhoneNumber: string;
+    BusinessName?: string; HasProfilePicture: boolean;
+    AvgRating: number; TotalReviews: number; TotalSpaces: number;
+  }>(
+    `SELECT
+      p.FirstName, p.LastName, p.Email, p.PhoneNumber, p.BusinessName,
+      CASE WHEN p.ProfilePicture IS NOT NULL AND DATALENGTH(p.ProfilePicture) > 0 THEN 1 ELSE 0 END AS HasProfilePicture,
+      ISNULL((
+        SELECT AVG(CAST(r.Rating AS FLOAT))
+        FROM Reviews r
+        JOIN Bookings b ON b.BookingID = r.BookingID
+        JOIN StorageSpaces s ON s.SpaceID = b.SpaceID
+        WHERE s.ProviderID = p.ProviderID
+      ), 0) AS AvgRating,
+      ISNULL((
+        SELECT COUNT(*)
+        FROM Reviews r
+        JOIN Bookings b ON b.BookingID = r.BookingID
+        JOIN StorageSpaces s ON s.SpaceID = b.SpaceID
+        WHERE s.ProviderID = p.ProviderID
+      ), 0) AS TotalReviews,
+      (SELECT COUNT(*) FROM StorageSpaces WHERE ProviderID = p.ProviderID AND Status = 'Active') AS TotalSpaces
+    FROM StorageProviders p
+    WHERE p.ProviderID = @providerId`,
+    { providerId }
+  );
+}
+
+// ============================================================
 // SPACE IMAGES
 // ============================================================
 

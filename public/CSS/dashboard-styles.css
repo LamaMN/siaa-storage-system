@@ -1190,3 +1190,186 @@
     background: #fee2e2 !important;
     color: #ef4444 !important;
 }
+
+/* ========== Calendar Tooltip ========== */
+
+.calendar-tooltip {
+    background: #1a202c;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    pointer-events: none;
+    white-space: nowrap;
+    font-size: 13px;
+    animation: tooltip-in 0.15s ease;
+}
+
+.calendar-tooltip strong {
+    font-size: 14px;
+    color: #fff;
+}
+
+.calendar-tooltip span {
+    color: #cbd5e0;
+    font-size: 12px;
+}
+
+.calendar-tooltip-status {
+    color: #68d391 !important;
+    font-weight: 600;
+}
+
+.calendar-tooltip-status.expired {
+    color: #a0aec0 !important;
+}
+
+@keyframes tooltip-in {
+    from { opacity: 0; transform: translate(-50%, -90%); }
+    to { opacity: 1; transform: translate(-50%, -100%); }
+}
+
+.calendar-chip--expired {
+    opacity: 0.5;
+}
+
+/* ========== Provider Profile Popup ========== */
+
+.provider-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    animation: fade-in 0.2s ease;
+}
+
+.provider-popup {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 380px;
+    width: 90%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    animation: scale-in 0.2s ease;
+    text-align: center;
+}
+
+.provider-popup-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #ff6b35;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.25);
+}
+
+.provider-popup-name {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1a365d;
+    margin: 0;
+}
+
+.provider-popup-business {
+    font-size: 14px;
+    color: #718096;
+    margin: 0;
+}
+
+.provider-popup-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #f59e0b;
+}
+
+.provider-popup-rating span {
+    font-size: 13px;
+    color: #718096;
+    font-weight: 400;
+}
+
+.provider-popup-stats {
+    display: flex;
+    gap: 20px;
+    padding: 12px 0;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    width: 100%;
+    justify-content: center;
+}
+
+.provider-popup-stat {
+    text-align: center;
+}
+
+.provider-popup-stat-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1a365d;
+    display: block;
+}
+
+.provider-popup-stat-label {
+    font-size: 11px;
+    color: #718096;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.provider-popup-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.provider-popup-contact a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #4a5568;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.provider-popup-contact a:hover {
+    background: #fff5f0;
+    border-color: #ff6b35;
+    color: #ff6b35;
+}
+
+.provider-popup-contact a i {
+    width: 20px;
+    text-align: center;
+    color: #ff6b35;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scale-in {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}

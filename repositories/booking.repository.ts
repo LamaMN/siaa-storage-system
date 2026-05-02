@@ -170,6 +170,44 @@ export async function deleteRejectedBooking(
 }
 
 // ============================================================
+// DATE CONFLICT CHECK (for booking page)
+// ============================================================
+
+export async function findActiveBookingsForSpace(spaceId: number): Promise<{
+    StartDate: string; EndDate: string;
+}[]> {
+    return query<{ StartDate: string; EndDate: string }>(
+        `SELECT StartDate, EndDate FROM Bookings
+         WHERE SpaceID = @spaceId
+           AND BookingStatus IN ('Confirmed', 'Active', 'Pending')
+         ORDER BY StartDate ASC`,
+        { spaceId }
+    );
+}
+
+// ============================================================
+// PROVIDER REVIEW RESPONSE
+// ============================================================
+
+export async function addProviderResponse(
+    reviewId: number,
+    providerId: number,
+    response: string
+): Promise<boolean> {
+    const result = await execute(
+        `UPDATE Reviews SET ProviderResponse = @response, ProviderResponseDate = GETDATE()
+         WHERE ReviewID = @reviewId
+           AND BookingID IN (
+             SELECT b.BookingID FROM Bookings b
+             JOIN StorageSpaces s ON s.SpaceID = b.SpaceID
+             WHERE s.ProviderID = @providerId
+           )`,
+        { reviewId, providerId, response }
+    );
+    return (result.rowsAffected[0] || 0) > 0;
+}
+
+// ============================================================
 // REVIEW REPOSITORY
 // ============================================================
 
