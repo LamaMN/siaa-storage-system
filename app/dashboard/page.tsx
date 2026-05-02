@@ -125,6 +125,14 @@ export default function DashboardPage() {
     const [calendarBookings, setCalendarBookings] = useState<CalendarBooking[]>([]);
     const [calendarMonth, setCalendarMonth] = useState(new Date());
     const [calendarFilter, setCalendarFilter] = useState<number | 'all'>('all');
+    const [calendarTooltip, setCalendarTooltip] = useState<{ booking: CalendarBooking; x: number; y: number } | null>(null);
+    const [spaceReviewsMap, setSpaceReviewsMap] = useState<Record<number, Array<{
+        ReviewID: number; Rating: number; Comment?: string;
+        SeekerFirstName?: string; SeekerLastName?: string;
+        ProviderResponse?: string; ProviderResponseDate?: string; CreatedAt: string;
+    }>>>({});
+    const [replyTexts, setReplyTexts] = useState<Record<number, string>>({});
+    const [replyLoading, setReplyLoading] = useState<number | null>(null);
 
 
     const [showFavorites, setShowFavorites] = useState(false);
@@ -412,6 +420,7 @@ export default function DashboardPage() {
         }
     }
 
+<<<<<<< Updated upstream
 
     function normalizeSpace(space: SpaceItem): SpaceItem {
         return {
@@ -467,6 +476,40 @@ export default function DashboardPage() {
             )
         );
     }
+=======
+    async function fetchSpaceReviewsForProvider(spaceId: number) {
+        try {
+            const res = await fetch(`/api/spaces/${spaceId}/reviews`);
+            const json = await res.json();
+            setSpaceReviewsMap(prev => ({ ...prev, [spaceId]: json.reviews || [] }));
+        } catch {
+            setSpaceReviewsMap(prev => ({ ...prev, [spaceId]: [] }));
+        }
+    }
+
+    async function handleReplyToReview(reviewId: number, spaceId: number) {
+        const text = replyTexts[reviewId]?.trim();
+        if (!text) return;
+        setReplyLoading(reviewId);
+        try {
+            const res = await fetch(`/api/spaces/${spaceId}/reviews`, {
+                method: 'POST',
+                headers: authHeaders(token),
+                body: JSON.stringify({ reviewId, response: text }),
+            });
+            if (res.ok) {
+                setReplyTexts(prev => ({ ...prev, [reviewId]: '' }));
+                fetchSpaceReviewsForProvider(spaceId);
+            } else {
+                const d = await res.json();
+                alert(d.error || 'Failed to submit reply');
+            }
+        } finally {
+            setReplyLoading(null);
+        }
+    }
+
+>>>>>>> Stashed changes
     function logout() {
         localStorage.removeItem('siaaUser');
         localStorage.removeItem('siaaToken');
@@ -850,6 +893,17 @@ export default function DashboardPage() {
                                                         <span className="history-item-date">{t.listed} {formatDate(space.CreatedAt)}</span>
                                                     </div>
                                                     <div className="history-item-footer" style={{ marginTop: '0.5rem', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                                        <button className="btn btn-outline btn-small" style={{ borderColor: '#3b82f6', color: '#3b82f6' }}
+                                                            onClick={() => {
+                                                                if (spaceReviewsMap[space.SpaceID]) {
+                                                                    setSpaceReviewsMap(prev => { const copy = { ...prev }; delete copy[space.SpaceID]; return copy; });
+                                                                } else {
+                                                                    fetchSpaceReviewsForProvider(space.SpaceID);
+                                                                }
+                                                            }}>
+                                                            <i className={`fa-solid ${spaceReviewsMap[space.SpaceID] ? 'fa-chevron-up' : 'fa-star'}`}></i>
+                                                            {spaceReviewsMap[space.SpaceID] ? 'Hide Reviews' : 'Reviews'}
+                                                        </button>
                                                         <a href={`/edit-space/${space.SpaceID}`} className="btn btn-outline btn-small" style={{ borderColor: '#f97316', color: '#f97316' }}>
                                                             <i className="fa-solid fa-pen"></i> {t.edit}
                                                         </a>
@@ -857,6 +911,65 @@ export default function DashboardPage() {
                                                             <i className="fa-solid fa-trash"></i> {t.delete}
                                                         </button>
                                                     </div>
+
+                                                    {/* Reviews for this space */}
+                                                    {spaceReviewsMap[space.SpaceID] && (
+                                                        <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                                            <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#1a365d', margin: '0 0 10px 0' }}>Reviews ({spaceReviewsMap[space.SpaceID].length})</h4>
+                                                            {spaceReviewsMap[space.SpaceID].length === 0 ? (
+                                                                <p style={{ color: '#a0aec0', fontSize: '13px', fontStyle: 'italic' }}>No reviews yet for this space.</p>
+                                                            ) : spaceReviewsMap[space.SpaceID].map(review => (
+                                                                <div key={review.ReviewID} style={{ padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '8px' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                                                        <span style={{ fontWeight: 700, fontSize: '13px', color: '#1a365d' }}>
+                                                                            {review.SeekerFirstName || 'User'} {review.SeekerLastName ? review.SeekerLastName.charAt(0) + '.' : ''}
+                                                                        </span>
+                                                                        <div style={{ display: 'flex', gap: '2px', fontSize: '13px' }}>
+                                                                            {Array.from({ length: 5 }).map((_, i) => (
+                                                                                <span key={i} style={{ color: i < review.Rating ? '#f59e0b' : '#d1d5db' }}>★</span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                    {review.Comment && <p style={{ margin: '4px 0', fontSize: '13px', color: '#4a5568' }}>{review.Comment}</p>}
+
+                                                                    {/* Existing provider response */}
+                                                                    {review.ProviderResponse ? (
+                                                                        <div style={{ marginTop: '8px', padding: '8px 10px', background: '#fff5f0', borderRadius: '6px', borderLeft: '3px solid #ff6b35' }}>
+                                                                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#ff6b35', marginBottom: '2px' }}>
+                                                                                <i className="fa-solid fa-reply" style={{ fontSize: '9px', marginRight: '4px' }}></i>Your Reply
+                                                                            </div>
+                                                                            <p style={{ margin: 0, fontSize: '13px', color: '#4a5568' }}>{review.ProviderResponse}</p>
+                                                                        </div>
+                                                                    ) : (
+                                                                        /* Reply input */
+                                                                        <div style={{ marginTop: '8px', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder="Write a reply..."
+                                                                                value={replyTexts[review.ReviewID] || ''}
+                                                                                onChange={e => setReplyTexts(prev => ({ ...prev, [review.ReviewID]: e.target.value }))}
+                                                                                style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px', outline: 'none' }}
+                                                                                onFocus={e => { e.currentTarget.style.borderColor = '#ff6b35'; }}
+                                                                                onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                                                                            />
+                                                                            <button
+                                                                                onClick={() => handleReplyToReview(review.ReviewID, space.SpaceID)}
+                                                                                disabled={replyLoading === review.ReviewID || !replyTexts[review.ReviewID]?.trim()}
+                                                                                style={{
+                                                                                    padding: '6px 12px', borderRadius: '6px', border: 'none',
+                                                                                    background: replyTexts[review.ReviewID]?.trim() ? '#ff6b35' : '#e2e8f0',
+                                                                                    color: replyTexts[review.ReviewID]?.trim() ? '#fff' : '#a0aec0',
+                                                                                    fontSize: '12px', fontWeight: 700, cursor: replyTexts[review.ReviewID]?.trim() ? 'pointer' : 'not-allowed',
+                                                                                }}
+                                                                            >
+                                                                                {replyLoading === review.ReviewID ? <i className="fa-solid fa-spinner fa-spin"></i> : 'Reply'}
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </li>
                                             ))}
                                         </ul>
@@ -1003,12 +1116,17 @@ export default function DashboardPage() {
                                                             <div className="calendar-day-chips">
                                                                 {dayBookings.slice(0, 2).map(b => {
                                                                     const spaceInfo = uniqueSpaces.find(s => s.id === b.SpaceID);
+                                                                    const isExpired = new Date(b.EndDate) < new Date();
                                                                     return (
                                                                         <div
                                                                             key={b.BookingID}
-                                                                            className="calendar-chip"
-                                                                            style={{ backgroundColor: spaceInfo?.color || '#ff6b35' }}
-                                                                            title={`${b.SpaceTitle} (${b.BookingStatus})`}
+                                                                            className={`calendar-chip ${isExpired ? 'calendar-chip--expired' : ''}`}
+                                                                            style={{ backgroundColor: isExpired ? '#cbd5e0' : (spaceInfo?.color || '#ff6b35') }}
+                                                                            onMouseEnter={(e) => {
+                                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                                setCalendarTooltip({ booking: b, x: rect.left + rect.width / 2, y: rect.top - 8 });
+                                                                            }}
+                                                                            onMouseLeave={() => setCalendarTooltip(null)}
                                                                         ></div>
                                                                     );
                                                                 })}
@@ -1020,6 +1138,23 @@ export default function DashboardPage() {
                                                     );
                                                 })}
                                             </div>
+
+                                            {/* Floating Tooltip */}
+                                            {calendarTooltip && (
+                                                <div className="calendar-tooltip" style={{
+                                                    position: 'fixed',
+                                                    left: calendarTooltip.x,
+                                                    top: calendarTooltip.y,
+                                                    transform: 'translate(-50%, -100%)',
+                                                    zIndex: 100,
+                                                }}>
+                                                    <strong>{calendarTooltip.booking.SpaceTitle}</strong>
+                                                    <span>{formatDate(calendarTooltip.booking.StartDate)} – {formatDate(calendarTooltip.booking.EndDate)}</span>
+                                                    <span className={`calendar-tooltip-status ${new Date(calendarTooltip.booking.EndDate) < new Date() ? 'expired' : ''}`}>
+                                                        {new Date(calendarTooltip.booking.EndDate) < new Date() ? 'Completed' : calendarTooltip.booking.BookingStatus}
+                                                    </span>
+                                                </div>
+                                            )}
 
                                             {/* Legend */}
                                             {uniqueSpaces.length > 0 && (

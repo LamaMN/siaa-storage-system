@@ -27,6 +27,7 @@ const Space3DVisualizer = dynamic(() => import('../components/Space3DVisualizer'
 
 interface SpaceResult {
     SpaceID: number;
+    ProviderID?: number;
     Title: string;
     SpaceType?: string;
     Size?: number;
@@ -46,13 +47,25 @@ interface SpaceResult {
     ParkingAvailable?: boolean;
     MatchScore?: number;
     FirstImageID?: number;
+<<<<<<< Updated upstream
     FavoriteCount?: number;
     IsFavorited?: boolean;
+=======
+>>>>>>> Stashed changes
     ProviderFirstName?: string;
     ProviderLastName?: string;
     ProviderEmail?: string;
     ProviderPhone?: string;
     BusinessName?: string;
+<<<<<<< Updated upstream
+=======
+}
+
+interface ProviderProfile {
+    FirstName: string; LastName: string; Email: string; PhoneNumber: string;
+    BusinessName?: string; HasProfilePicture: boolean;
+    AvgRating: number; TotalReviews: number; TotalSpaces: number;
+>>>>>>> Stashed changes
 }
 
 // City names in English (used as DB keys) + Arabic display names
@@ -155,6 +168,8 @@ export default function SearchPage() {
     const [hoverRating, setHoverRating] = useState(0);
     const [submitReviewLoading, setSubmitReviewLoading] = useState(false);
     const [reviewError, setReviewError] = useState('');
+    const [providerPopup, setProviderPopup] = useState<ProviderProfile | null>(null);
+    const [providerPopupLoading, setProviderPopupLoading] = useState(false);
 
     const [filters, setFilters] = useState({
         city: '',
@@ -552,6 +567,20 @@ export default function SearchPage() {
             : prev
         );
         }
+
+    async function openProviderPopup(providerId: number) {
+        if (!providerId) return;
+        setProviderPopupLoading(true);
+        try {
+            const res = await fetch(`/api/provider/${providerId}/profile`);
+            const json = await res.json();
+            if (json.profile) setProviderPopup(json.profile);
+        } catch (err) {
+            console.error('Failed to load provider profile:', err);
+        } finally {
+            setProviderPopupLoading(false);
+        }
+    }
 
     return (
         <>
@@ -1124,6 +1153,42 @@ export default function SearchPage() {
                                                 {!modalSpace.ClimateControlled && !modalSpace.SecuritySystem && !modalSpace.ParkingAvailable && <span style={{ color: '#a0aec0', fontSize: '14px', fontStyle: 'italic' }}>{t.basicStorage}</span>}
                                             </div>
                                         </div>
+<<<<<<< Updated upstream
+=======
+
+                                        {/* Provider / Contact Info */}
+                                        <div style={{ marginBottom: '16px', padding: '14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                            <span style={{ fontSize: '13px', color: '#4a5568', fontWeight: 700, display: 'block', marginBottom: '10px' }}>Space Provider</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                                                <span
+                                                    onClick={(e) => { e.stopPropagation(); if (modalSpace.ProviderID) openProviderPopup(modalSpace.ProviderID); }}
+                                                    style={{ fontSize: '15px', fontWeight: 700, color: '#ff6b35', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                                                >
+                                                    {providerPopupLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : null}
+                                                    {modalSpace.BusinessName || `${modalSpace.ProviderFirstName || ''} ${modalSpace.ProviderLastName || ''}`.trim() || 'Provider'}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                                {modalSpace.ProviderPhone && (
+                                                    <a href={`tel:${modalSpace.ProviderPhone}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#4a5568', textDecoration: 'none', padding: '6px 12px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', transition: 'all 0.2s ease' }}
+                                                       onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff6b35'; e.currentTarget.style.color = '#ff6b35'; }}
+                                                       onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#4a5568'; }}>
+                                                        <i className="fa-solid fa-phone" style={{ color: '#ff6b35', fontSize: '12px' }}></i>
+                                                        {modalSpace.ProviderPhone}
+                                                    </a>
+                                                )}
+                                                {modalSpace.ProviderEmail && (
+                                                    <a href={`mailto:${modalSpace.ProviderEmail}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#4a5568', textDecoration: 'none', padding: '6px 12px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', transition: 'all 0.2s ease' }}
+                                                       onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff6b35'; e.currentTarget.style.color = '#ff6b35'; }}
+                                                       onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#4a5568'; }}>
+                                                        <i className="fa-solid fa-envelope" style={{ color: '#ff6b35', fontSize: '12px' }}></i>
+                                                        {modalSpace.ProviderEmail}
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+
+>>>>>>> Stashed changes
                                         {/* Compact Pricing Breakdown */}
                                         <div style={{ display: 'flex', gap: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '12px', paddingBottom: '8px', marginTop: 'auto' }}>
                                             <div style={{ flex: '1', textAlign: 'center', borderRight: '1px solid #e2e8f0', paddingRight: '16px' }}>
