@@ -420,8 +420,6 @@ export default function DashboardPage() {
         }
     }
 
-<<<<<<< Updated upstream
-
     function normalizeSpace(space: SpaceItem): SpaceItem {
         return {
             ...space,
@@ -476,7 +474,7 @@ export default function DashboardPage() {
             )
         );
     }
-=======
+
     async function fetchSpaceReviewsForProvider(spaceId: number) {
         try {
             const res = await fetch(`/api/spaces/${spaceId}/reviews`);
@@ -508,8 +506,6 @@ export default function DashboardPage() {
             setReplyLoading(null);
         }
     }
-
->>>>>>> Stashed changes
     function logout() {
         localStorage.removeItem('siaaUser');
         localStorage.removeItem('siaaToken');
