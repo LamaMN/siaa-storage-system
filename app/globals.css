@@ -22,6 +22,12 @@ body {
     box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.15) !important;
 }
 
+/* Hide native Edge/IE password eye icon since we have our own */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
 /* Header button: prevent flex stretching */
 .btn-header {
     flex: 0 0 auto !important;

@@ -131,8 +131,8 @@ export default function RegisterPage() {
                         </nav>
                         
                         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
-                    <LanguageToggle />
-                </div>
+                            <LanguageToggle hideIcons={true} />
+                        </div>
                     </div>
                 </div>
             </header>

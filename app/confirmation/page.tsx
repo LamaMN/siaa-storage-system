@@ -20,10 +20,7 @@ function usePageLanguage(): Language {
 
     return lang;
 }
-const lang = usePageLanguage();
-const t = translations[lang];
-
-function ConfirmationPageContent() {
+function ConfirmationPageContent({ lang, t }: { lang: Language; t: any }) {
 
 
     const searchParams = useSearchParams();
@@ -149,6 +146,8 @@ function ConfirmationPageContent() {
 }
 
 export default function ConfirmationPage() {
+    const lang = usePageLanguage();
+    const t = translations[lang];
 
     return (
         <>
@@ -160,13 +159,6 @@ export default function ConfirmationPage() {
                         <div className="logo">
                             <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
-                        <a
-                            href="/register"
-                            className="btn btn-primary btn-header"
-                            style={{ width: 'auto', flexShrink: 0, whiteSpace: 'nowrap' }}
-                        >
-                            {t.getStarted}
-                        </a>
 
                         <nav className="nav">
                             <a href="/dashboard">{t.dashboard}</a>
@@ -183,7 +175,7 @@ export default function ConfirmationPage() {
             </header>
 
             <Suspense fallback={<div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>}>
-                <ConfirmationPageContent />
+                <ConfirmationPageContent lang={lang} t={t} />
             </Suspense>
 
             <footer className="footer">

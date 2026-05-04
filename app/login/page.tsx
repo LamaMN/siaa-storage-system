@@ -80,7 +80,7 @@ export default function LoginPage() {
                             <a href="/#how-it-works">{t.howItWorks}</a>
                         </nav>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
-                            <LanguageToggle />
+                            <LanguageToggle hideIcons={true} />
                         </div>
 
                     </div>

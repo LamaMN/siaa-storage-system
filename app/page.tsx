@@ -57,6 +57,8 @@ export default async function HomePage() {
                             gap: '20px',
                         }}
                         >
+                        <LanguageToggle />
+
                         {!token && (
                             <a
                                 href="/register"
@@ -66,8 +68,6 @@ export default async function HomePage() {
                                 {t.getStarted}
                             </a>
                         )}
-
-                        <LanguageToggle />
                         </div>
                     </div>
                 </div>

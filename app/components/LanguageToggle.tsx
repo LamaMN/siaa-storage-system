@@ -16,8 +16,11 @@ interface FavoriteSpace {
     ParkingAvailable?: boolean;
     LoadingAssistance?: boolean;
 }
+interface LanguageToggleProps {
+    hideIcons?: boolean;
+}
 
-export default function LanguageToggle() {
+export default function LanguageToggle({ hideIcons = false }: LanguageToggleProps) {
     const [lang, setLang] = useState<'en' | 'ar'>('en');
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isProvider, setIsProvider] = useState(false);
@@ -93,8 +96,14 @@ export default function LanguageToggle() {
     }
 
     function openSpaceDetails(spaceId: number) {
-        sessionStorage.setItem('openSpaceId', spaceId.toString());
-        window.location.href = '/search';
+        if (window.location.pathname === '/search') {
+            const event = new CustomEvent('openSpaceModal', { detail: spaceId });
+            window.dispatchEvent(event);
+            setShowFavorites(false);
+        } else {
+            sessionStorage.setItem('openSpaceId', spaceId.toString());
+            window.location.href = '/search';
+        }
     }
 
     function toggleLang() {
@@ -126,7 +135,7 @@ export default function LanguageToggle() {
                 {lang === 'en' ? 'AR' : 'EN'}
             </a>
 
-            {isLoggedIn && !isProvider && !isAdmin && (
+            {!hideIcons && isLoggedIn && !isProvider && !isAdmin && (
                 <div className="favorites-container" ref={popupRef}>
                     <button
                         onClick={toggleFavoritesDropdown}
@@ -175,7 +184,7 @@ export default function LanguageToggle() {
                                                 {space.BusinessName && <span className="favorite-item-company">{space.BusinessName}</span>}
                                                 <div className="favorite-item-details">
                                                     <span>{space.AddressLine1}</span>
-                                                    <span>{space.PricePerMonth} SAR/mo • {space.Size} m²</span>
+                                                    <span>{space.PricePerMonth} {lang === 'en' ? 'SAR/mo' : 'ريال/شهر'} • {space.Size} {lang === 'en' ? 'm²' : 'م²'}</span>
                                                 </div>
                                                 {features.length > 0 && (
                                                     <span className="favorite-item-features">{features.join(' • ')}</span>
@@ -197,7 +206,7 @@ export default function LanguageToggle() {
                 </div>
             )}
 
-            {isLoggedIn && (
+            {!hideIcons && isLoggedIn && (
                 <a
                     href="/dashboard"
                     style={{ cursor: 'pointer', transition: 'color 0.3s', color: 'inherit' }}
@@ -209,7 +218,7 @@ export default function LanguageToggle() {
                 </a>
             )}
 
-            {isLoggedIn && (
+            {!hideIcons && isLoggedIn && (
                 <a
                     onClick={handleSignOut}
                     style={{ cursor: 'pointer', transition: 'color 0.3s' }}
