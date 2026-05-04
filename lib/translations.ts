@@ -73,7 +73,7 @@ export const translations = {
         feature1Title: "Peer-to-Peer Storage",
         feature1Desc: "Utilize unused rooms, garages, basements.",
 
-        feature2Title: "AI Smart Matching",
+        feature2Title: "Smart Matching Based on Your Needs",
         feature2Desc: "Recommends ideal space based on size, budget, and environment.",
 
         feature3Title: "Space Visualization",
@@ -611,7 +611,11 @@ export const translations = {
         flexiblePlans: "Flexible daily, weekly, and monthly plans",
         verifiedSecureBookings: "Verified users & secure bookings",
         smartMatchingNeeds: "Smart matching based on your needs",
-
+        ticketsOverTime: "Tickets Over Time",
+        providerContactTitle: "Provider Information",
+        providerNameLabel: "Name:",
+        providerPhoneLabel: "Phone:",
+        providerEmailLabel: "Email:",
         listMySpace: "List My Space",
         fillDetailsSiaa: "Fill in your details to get started with Si'aa.",
 
@@ -925,7 +929,7 @@ export const translations = {
         feature1Title: "تخزين بين الأفراد",
         feature1Desc: "استفد من الغرف أو المرائب أو الأقبية غير المستخدمة.",
 
-        feature2Title: "مطابقة ذكية بالذكاء الاصطناعي",
+        feature2Title: "مطابقة ذكية حسب احتياجاتك",
         feature2Desc: "يقترح المساحة المثالية حسب الحجم والميزانية والبيئة.",
 
         feature3Title: "تصور المساحة",
@@ -1170,7 +1174,8 @@ export const translations = {
         accountName: "اسم الحساب",
         notifications: "الإشعارات",
         emailNotifications: "إشعارات البريد الإلكتروني",
-        receiveEmailUpdates: "استلام التحديثات والتنبيهات عبر البريد الإلكتروني", smsNotifications: "إشعارات الرسائل النصية",
+        receiveEmailUpdates: "استلام التحديثات والتنبيهات عبر البريد الإلكتروني",
+        smsNotifications: "إشعارات الرسائل النصية",
         smsHint: "احصل على تنبيهات مهمة على هاتفك.",
         pushNotifications: "إشعارات فورية",
         getInAppAlerts: "تلقي تنبيهات وتذكيرات داخل التطبيق", communicationMethod: "طريقة الاتصال المفضلة",
@@ -1463,7 +1468,11 @@ export const translations = {
         reviewPublishDescription:
             "تحقق من معلوماتك قبل نشر إعلانك.",
 
-
+        providerContactTitle: "معلومات المزود",
+        providerNameLabel: "الاسم:",
+        providerPhoneLabel: "الهاتف:",
+        providerEmailLabel: "البريد الإلكتروني:",
+        ticketsOverTime: "التذاكر عبر الوقت",
         type:
             "النوع:",
 
