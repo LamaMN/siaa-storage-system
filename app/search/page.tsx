@@ -119,7 +119,7 @@ const NEIGHBORHOOD_LABEL: Record<string, { en: string; ar: string }> = {
 };
 
 export default function SearchPage() {
-    const t = getT();
+
     const [showLocationModal, setShowLocationModal] = useState(false);
     const [selectedCity, setSelectedCity] = useState('');
     const [spaces, setSpaces] = useState<SpaceResult[]>([]);
@@ -193,7 +193,16 @@ export default function SearchPage() {
         // Sort
         sortBy: 'match',
     });
+    const [lang, setLang] = useState<'en' | 'ar'>('en');
 
+    useEffect(() => {
+        const match = document.cookie.match(/(?:^|; )lang=([^;]+)/);
+        if (match?.[1] === 'ar') {
+            setLang('ar');
+        }
+    }, []);
+
+    const t = translations[lang];
     const [priceRange, setPriceRange] = useState({ min: 80, max: 5000 });
     const [priceRangeLoading, setPriceRangeLoading] = useState(true);
     const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([]);

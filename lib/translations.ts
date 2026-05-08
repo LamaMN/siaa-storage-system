@@ -869,7 +869,7 @@ export const translations = {
     },
     ar: {
         // =====ar homepage =====
-
+        viewDetails: 'عرض التفاصيل',
         getStarted: 'ابدأ الآن',
         about: 'حول',
         features: 'المميزات',
@@ -1669,7 +1669,6 @@ export const translations = {
         percentMatch: "% تطابق",
         perMonthShort: "/ شهر",
         sarPerMonthLong: "ريال / شهر",
-        viewDetails: "عرض التفاصيل",
         noSpacesAvailable: "لا توجد مساحات متاحة — جرب قيماً مختلفة.",
         useFilterPrompt: "استخدم الفلاتر على اليسار للبحث عن مساحات التخزين.",
         loadMoreSpaces: "تحميل المزيد من المساحات",
