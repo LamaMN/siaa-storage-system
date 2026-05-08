@@ -722,7 +722,7 @@ export default function SearchPage() {
                                                     {priceRangeLoading ? (
                                                         <span>- - -</span>
                                                     ) : (
-                                                        <><span>{priceRange.min} SAR</span><span>{filters.maxPrice} SAR</span></>
+                                                        <><span>{priceRange.min} {t.sar}</span><span>{filters.maxPrice} {t.sar}</span></>
                                                     )}
                                                 </span>
                                             </div>
@@ -923,8 +923,8 @@ export default function SearchPage() {
                                                     </p>
                                                 </div>
                                                 <div className="space-card-price" style={{ textAlign: 'right', flexShrink: 0 }}>
-                                                    <span className="price-amount" style={{ display: 'block', fontSize: '18px', fontWeight: 800, color: '#ff6b35' }}>{space.PricePerMonth || '?'} SAR</span>
-                                                    <span className="price-unit" style={{ fontSize: '11px', color: '#a0aec0' }}>/ mo</span>
+                                                    <span className="price-amount" style={{ display: 'block', fontSize: '18px', fontWeight: 800, color: '#ff6b35' }}>{space.PricePerMonth || '?'} {t.sar}</span>
+                                                    <span className="price-unit" style={{ fontSize: '11px', color: '#a0aec0' }}>/ {t.sar}</span>
                                                 </div>
                                             </div>
                                             <div

@@ -855,7 +855,7 @@ export default function DashboardPage() {
                                                             onClick={() => setInvoiceBooking(booking)}
                                                         >
                                                             <i className="fa-solid fa-file-invoice" style={{ marginRight: '4px' }}></i>
-                                                            Invoice
+                                                            {t.invoiceTitle}
                                                         </button>
                                                         {booking.BookingStatus === 'Pending' && (
                                                             <button
@@ -911,8 +911,9 @@ export default function DashboardPage() {
                                                             {space.TotalBookings} {t.bookings}
                                                         </p>                                                    </div>
                                                     <div className="history-item-footer">
-                                                        <span className="history-item-price">{formatPrice(space.PricePerMonth)} SAR/month</span>
-                                                        <span className="history-item-date">{t.listed} {formatDate(space.CreatedAt)}</span>
+                                                        <span className="history-item-price">
+                                                            {formatPrice(space.PricePerMonth)} {t.sarPerMonth}
+                                                        </span>                                                        <span className="history-item-date">{t.listed} {formatDate(space.CreatedAt)}</span>
                                                     </div>
                                                     <div className="history-item-footer" style={{ marginTop: '0.5rem', justifyContent: 'flex-end', gap: '0.5rem' }}>
                                                         <button className="btn btn-outline btn-small" style={{ borderColor: '#3b82f6', color: '#3b82f6' }}
@@ -1025,8 +1026,10 @@ export default function DashboardPage() {
                                                     <div className="history-item-details">
                                                         <p><i className="fa-solid fa-user"></i>  {t.seeker}: {booking.SeekerName} · {booking.SeekerEmail}</p>
                                                         <p><i className="fa-solid fa-calendar"></i> {formatDate(booking.StartDate)} - {formatDate(booking.EndDate)}</p>
-                                                        <p><i className="fa-solid fa-money-bill"></i> {formatPrice(booking.TotalAmount)} SAR</p>
-                                                    </div>
+                                                        <p>
+                                                            <i className="fa-solid fa-money-bill"></i>
+                                                            {formatPrice(booking.TotalAmount)} {t.sar}
+                                                        </p>                                                    </div>
                                                     {booking.BookingStatus === 'Pending' && (
                                                         <div className="history-item-footer" style={{ gap: '0.5rem' }}>
                                                             <button className="btn btn-dark btn-small"
@@ -1229,7 +1232,7 @@ export default function DashboardPage() {
                                 <div className="stat-card">
                                     <div className="stat-icon"><i className="fa-solid fa-chart-line"></i></div>
                                     <div className="stat-content">
-                                        <h3 className="stat-value">{formatPrice(isProvider ? stats.TotalRevenue : stats.TotalSpent)} SAR</h3>
+                                        <h3 className="stat-value">{formatPrice(isProvider ? stats.TotalRevenue : stats.TotalSpent)} {t.sar}</h3>
                                         <p className="stat-label">{isProvider ? t.totalRevenue : t.totalSpent}</p>
                                     </div>
                                 </div>

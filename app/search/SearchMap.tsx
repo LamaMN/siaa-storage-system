@@ -91,8 +91,13 @@ export default function SearchMap({ spaces }: { spaces: any[] }) {
                 .bindPopup(`
                     <strong>${space.Title || 'Storage Space'}</strong><br>
                     ${space.SpaceType || ''} · ${space.Size || '?'} m²<br>
-                    <b>${space.PricePerMonth !== undefined ? (space.PricePerMonth >= 1000 ? (space.PricePerMonth / 1000).toFixed(1) + 'k' : space.PricePerMonth.toFixed(0)) : '?'} SAR/mo</b><br>
-<button onclick="window.dispatchEvent(new CustomEvent('openSpaceModal', {detail: ${space.SpaceID}}))" class="btn btn-dark btn-small" style="width: 100%; margin-top: 8px; padding: 4px; font-size: 11px;">${t.viewDetails}</button>                `);
+<b>
+${space.PricePerMonth !== undefined
+                        ? (space.PricePerMonth >= 1000
+                            ? (space.PricePerMonth / 1000).toFixed(1) + 'k'
+                            : space.PricePerMonth.toFixed(0))
+                        : '?'} ${t.sarPerMonth}
+</b><br><button onclick="window.dispatchEvent(new CustomEvent('openSpaceModal', {detail: ${space.SpaceID}}))" class="btn btn-dark btn-small" style="width: 100%; margin-top: 8px; padding: 4px; font-size: 11px;">${t.viewDetails}</button>                `);
 
             markersRef.current.push(marker);
         });
