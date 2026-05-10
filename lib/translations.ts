@@ -139,6 +139,9 @@ export const translations = {
         selectYourDates: 'Select your dates',
         estimatedTotal: 'Estimated total',
         sar: 'SAR',
+        storageFee: 'Storage Fee',
+        platformFee: 'Platform Fee',
+        grandTotal: 'Grand Total',
         selectStartEndDates: 'Please select start and end dates.',
         endDateAfterStart: 'End date must be after start date.',
         selectLogisticsCompany: 'Please select a logistics company.',
@@ -809,6 +812,7 @@ export const translations = {
         categoryPayment: "Payment",
         categoryTechnical: "Technical",
         categoryOther: "Other",
+        category: "Category",
 
         // ===== 3D space visualizer =====
         visualizer3DTitle: "3D Space Visualizer",
@@ -1024,6 +1028,9 @@ export const translations = {
         selectYourDates: 'اختر تواريخك',
         estimatedTotal: 'الإجمالي التقديري',
         sar: 'ريال',
+        storageFee: 'رسوم التخزين',
+        platformFee: 'رسوم المنصة',
+        grandTotal: 'المجموع الكلي',
         selectStartEndDates: 'الرجاء اختيار تاريخ البداية والنهاية.',
         endDateAfterStart: 'يجب أن يكون تاريخ النهاية بعد تاريخ البداية.',
         selectLogisticsCompany: 'الرجاء اختيار شركة لوجستية.',
@@ -1730,6 +1737,7 @@ export const translations = {
         categoryPayment: "المدفوعات",
         categoryTechnical: "دعم فني",
         categoryOther: "أخرى",
+        category: "الفئة",
 
         // ===== 3D space visualizer =====
         visualizer3DTitle: "معاينة ثلاثية الأبعاد",

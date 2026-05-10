@@ -122,23 +122,29 @@ function BookingPageContent({ lang }: { lang: Language }) {
         const days = Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24));
         const months = days / 30;
 
-        let total = 0;
+        let storageFee = 0;
         if (days >= 28 && space.PricePerMonth) {
-            total = Math.ceil(months) * parseFloat(space.PricePerMonth);
+            storageFee = Math.ceil(months) * parseFloat(space.PricePerMonth);
         } else if (days >= 7 && space.PricePerWeek) {
             const weeks = days / 7;
-            total = Math.ceil(weeks) * parseFloat(space.PricePerWeek);
+            storageFee = Math.ceil(weeks) * parseFloat(space.PricePerWeek);
         } else if (space.PricePerDay) {
-            total = days * parseFloat(space.PricePerDay);
+            storageFee = days * parseFloat(space.PricePerDay);
         } else if (space.PricePerMonth) {
-            total = Math.max(1, Math.ceil(months)) * parseFloat(space.PricePerMonth);
+            storageFee = Math.max(1, Math.ceil(months)) * parseFloat(space.PricePerMonth);
         }
 
+        let logisticsFee = 0;
         if (logistics === 'partner_pickup' && logisticsCompany && LOGISTICS_PRICES[logisticsCompany as keyof typeof LOGISTICS_PRICES]) {
-            total += LOGISTICS_PRICES[logisticsCompany as keyof typeof LOGISTICS_PRICES];
+            logisticsFee = LOGISTICS_PRICES[logisticsCompany as keyof typeof LOGISTICS_PRICES];
         }
 
-        return { total, days };
+        const platformFee = parseFloat((storageFee * 0.15).toFixed(2));
+        const subtotalBeforeVat = storageFee + logisticsFee + platformFee;
+        const vatAmount = parseFloat((subtotalBeforeVat * 0.15).toFixed(2));
+        const grandTotal = parseFloat((subtotalBeforeVat + vatAmount).toFixed(2));
+
+        return { total: grandTotal, storageFee, logisticsFee, platformFee, vatAmount, days };
     };
 
     const formatPrice = (value: number) => {
@@ -602,6 +608,13 @@ function BookingPageContent({ lang }: { lang: Language }) {
                                 </span>
                             </div>
 
+                            <div className="booking-side-row">
+                                <span className="booking-side-label">{t.storageFee}</span>
+                                <span className="booking-side-value">
+                                    {costDetails ? `${formatPrice(costDetails.storageFee)} ${t.sar}` : '—'}
+                                </span>
+                            </div>
+
                             {logistics === 'partner_pickup' && logisticsCompany && (
                                 <div className="booking-side-row">
                                     <span className="booking-side-label">
@@ -614,7 +627,21 @@ function BookingPageContent({ lang }: { lang: Language }) {
                             )}
 
                             <div className="booking-side-row">
-                                <span className="booking-side-label">{t.estimatedTotal}</span>
+                                <span className="booking-side-label">{t.platformFee}</span>
+                                <span className="booking-side-value">
+                                    {costDetails ? `${formatPrice(costDetails.platformFee)} ${t.sar}` : '—'}
+                                </span>
+                            </div>
+
+                            <div className="booking-side-row">
+                                <span className="booking-side-label">{t.vat} (15%)</span>
+                                <span className="booking-side-value">
+                                    {costDetails ? `${formatPrice(costDetails.vatAmount)} ${t.sar}` : '—'}
+                                </span>
+                            </div>
+
+                            <div className="booking-side-row">
+                                <span className="booking-side-label">{t.grandTotal}</span>
                                 <span className="booking-side-total">
                                     {costDetails ? `${formatPrice(costDetails.total)} ${t.sar}` : '—'}
                                 </span>

@@ -148,6 +148,14 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
       AND (@maxSize IS NULL OR s.Size <= @maxSize)
       AND (@climateControlled IS NULL OR sf.ClimateControlled = @climateControlled)
       AND (@parking IS NULL OR sf.ParkingAvailable = @parking)
+      -- Overlap check: exclude if there is a confirmed/active booking in the requested range
+      AND (@startDate IS NULL OR @endDate IS NULL OR NOT EXISTS (
+          SELECT 1 FROM Bookings b 
+          WHERE b.SpaceID = s.SpaceID 
+          AND b.BookingStatus IN ('Confirmed', 'Active')
+          AND b.StartDate < @endDate 
+          AND b.EndDate > @startDate
+      ))
     ${orderByClause}
     OFFSET @skip ROWS FETCH NEXT @limit ROWS ONLY`,
     {
@@ -171,6 +179,8 @@ export async function searchSpaces(filters: SpaceSearchFilters): Promise<{ space
       skip,
       limit,
       seekerId: filters.seekerId || null,
+      startDate: filters.startDate || null,
+      endDate: (filters as any).endDate || null,
     }
   );
   return {

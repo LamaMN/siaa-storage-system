@@ -113,9 +113,17 @@ export default function Chatbot() {
       setTicketData({ category: '', subject: '', description: '' });
   };
 
-  const handleCategorySelect = (category: string) => {
-      setTicketData(prev => ({ ...prev, category }));
+  const handleCategorySelect = (categoryKey: string) => {
+      setTicketData(prev => ({ ...prev, category: categoryKey }));
       setTicketStep(1); // Move to ask subject
+  };
+
+  const getCategoryLabel = (key: string) => {
+    if (key === 'Booking') return t.categoryBooking || "Booking";
+    if (key === 'Payment') return t.categoryPayment || "Payment";
+    if (key === 'Technical') return t.categoryTechnical || "Technical";
+    if (key === 'Other') return t.categoryOther || "Other";
+    return key;
   };
 
   const handleSendInput = async () => {
@@ -257,14 +265,19 @@ export default function Chatbot() {
                             
                             {ticketStep === 0 && (
                                 <div className="chatbot-list" style={{ marginTop: '10px' }}>
-                                    {[(t.categoryBooking || "Booking"), (t.categoryPayment || "Payment"), (t.categoryTechnical || "Technical"), (t.categoryOther || "Other")].map(cat => (
+                                    {[
+                                        { key: 'Booking', label: t.categoryBooking || "Booking" },
+                                        { key: 'Payment', label: t.categoryPayment || "Payment" },
+                                        { key: 'Technical', label: t.categoryTechnical || "Technical" },
+                                        { key: 'Other', label: t.categoryOther || "Other" }
+                                    ].map(cat => (
                                         <button 
-                                            key={cat} 
+                                            key={cat.key} 
                                             className="chatbot-list-item"
                                             style={{ padding: '10px', fontSize: '14px' }}
-                                            onClick={() => handleCategorySelect(cat)}
+                                            onClick={() => handleCategorySelect(cat.key)}
                                         >
-                                            {cat}
+                                            {cat.label}
                                         </button>
                                     ))}
                                 </div>
@@ -272,7 +285,7 @@ export default function Chatbot() {
 
                             {ticketStep >= 1 && (
                                 <div className="chatbot-bubble chatbot-bubble-user">
-                                    {ticketData.category}
+                                    {getCategoryLabel(ticketData.category)}
                                 </div>
                             )}
 

@@ -1667,14 +1667,17 @@ export default function DashboardPage() {
                     }
                 } catch { /* not JSON or no logistics */ }
 
-                const storageAmount = (invoiceBooking.TotalAmount || 0);
-                const platformFee = invoiceBooking.PlatformFee || 0;
+                const totalAmount = (invoiceBooking.TotalAmount || 0);
+                const platformFee = (invoiceBooking.PlatformFee || 0);
+
                 const logisticsFee = logisticsInfo?.company
                     ? ({ aramex: 50, smsa: 60, spl: 55 }[logisticsInfo.company] || 0)
                     : 0;
-                const subtotal = storageAmount;
-                const vat = parseFloat((subtotal * 0.15).toFixed(2));
-                const grandTotal = parseFloat((subtotal + vat).toFixed(2));
+                
+                const totalBeforeVat = totalAmount / 1.15;
+                const vat = totalAmount - totalBeforeVat;
+                const storageFee = totalBeforeVat - logisticsFee - platformFee;
+                const grandTotal = totalAmount;
 
                 const startD = invoiceBooking.StartDate ? new Date(invoiceBooking.StartDate) : null;
                 const endD = invoiceBooking.EndDate ? new Date(invoiceBooking.EndDate) : null;
@@ -1772,7 +1775,7 @@ export default function DashboardPage() {
                                         <span className="invoice-detail-label">
                                             <i className="fa-solid fa-warehouse"></i> {(t as any).invoiceStorageFees || 'Storage Fees'}
                                         </span>
-                                        <span className="invoice-detail-value">{formatPrice(storageAmount - logisticsFee)} {t.sar}</span>
+                                        <span className="invoice-detail-value">{formatPrice(storageFee)} {t.sar}</span>
                                     </div>
                                     {logisticsFee > 0 && (
                                         <div className="invoice-detail-row">
@@ -1782,14 +1785,14 @@ export default function DashboardPage() {
                                             <span className="invoice-detail-value">{formatPrice(logisticsFee)} {t.sar}</span>
                                         </div>
                                     )}
-                                    {platformFee > 0 && (
-                                        <div className="invoice-detail-row">
-                                            <span className="invoice-detail-label">
-                                                <i className="fa-solid fa-hand-holding-dollar"></i> {(t as any).invoicePlatformFee || 'Platform Fee'}
-                                            </span>
-                                            <span className="invoice-detail-value">{formatPrice(platformFee)} {t.sar}</span>
-                                        </div>
-                                    )}
+
+                                    <div className="invoice-detail-row">
+                                        <span className="invoice-detail-label">
+                                            <i className="fa-solid fa-hand-holding-dollar"></i> {(t as any).invoicePlatformFee || 'Platform Fee'}
+                                        </span>
+                                        <span className="invoice-detail-value">{formatPrice(platformFee)} {t.sar}</span>
+                                    </div>
+
                                     <div className="invoice-detail-row">
                                         <span className="invoice-detail-label">
                                             <i className="fa-solid fa-percent"></i> {(t as any).invoiceVat || 'VAT (15%)'}

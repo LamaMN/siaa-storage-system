@@ -60,6 +60,23 @@ export async function getSpaceDetail(id: number) {
 }
 
 export async function searchAndRecommendSpaces(filters: SpaceSearchFilters) {
+    // Calculate endDate if startDate and rentalDuration are provided
+    if (filters.startDate && filters.rentalDuration) {
+        const start = new Date(filters.startDate);
+        const end = new Date(start);
+        
+        if (filters.rentalDuration === 'daily') {
+            end.setDate(end.getDate() + 1);
+        } else if (filters.rentalDuration === 'weekly') {
+            end.setDate(end.getDate() + 7);
+        } else if (filters.rentalDuration === 'monthly') {
+            end.setMonth(end.getMonth() + 1);
+        }
+        
+        // Add endDate to filters for repository
+        (filters as any).endDate = end.toISOString().split('T')[0];
+    }
+
     const results = await searchSpaces(filters);
     return results;
 }

@@ -64,28 +64,58 @@ export async function createBooking(
         throw new Error(`Minimum rental period is ${space.MinRentalPeriod} day(s)`);
     }
 
-    // Calculate total amount
-    let totalAmount: number;
+    // Calculate total amount (Storage Fee)
+    let storageFee: number;
     if (durationDays <= 7 && space.PricePerDay) {
-        totalAmount = durationDays * space.PricePerDay;
+        storageFee = durationDays * space.PricePerDay;
     } else if (durationDays <= 28 && space.PricePerWeek) {
         const weeks = durationDays / 7;
-        totalAmount = Math.ceil(weeks) * space.PricePerWeek;
+        storageFee = Math.ceil(weeks) * space.PricePerWeek;
     } else {
         const months = durationDays / 30;
-        totalAmount = Math.ceil(months) * space.PricePerMonth;
+        storageFee = Math.ceil(months) * (space.PricePerMonth || 0);
+    }
+
+    // Logistics Fee
+    let logisticsFee = 0;
+    if (data.logisticsOption === 'partner_pickup' && data.specialRequests) {
+        try {
+            const logisticsInfo = JSON.parse(data.specialRequests);
+            const LOGISTICS_PRICES: Record<string, number> = { aramex: 50, smsa: 60, spl: 55 };
+            logisticsFee = LOGISTICS_PRICES[logisticsInfo.company] || 0;
+        } catch (e) {
+            // Fallback or ignore if not JSON
+        }
     }
 
     const PLATFORM_FEE_RATE = 0.15;
-    const platformFee = parseFloat((totalAmount * PLATFORM_FEE_RATE).toFixed(2));
+    const VAT_RATE = 0.15;
+
+    const platformFee = parseFloat((storageFee * PLATFORM_FEE_RATE).toFixed(2));
+    const subtotalBeforeVat = storageFee + logisticsFee + platformFee;
+    const vatAmount = parseFloat((subtotalBeforeVat * VAT_RATE).toFixed(2));
+    const grandTotal = parseFloat((subtotalBeforeVat + vatAmount).toFixed(2));
 
     const bookingId = await createBookingRepo(
-        { spaceId: data.spaceId, seekerId, startDate: data.startDate, endDate: data.endDate, specialRequests: data.specialRequests },
-        parseFloat(totalAmount.toFixed(2)),
+        { 
+            spaceId: data.spaceId, 
+            seekerId, 
+            startDate: data.startDate, 
+            endDate: data.endDate, 
+            specialRequests: data.specialRequests 
+        },
+        grandTotal,
         platformFee
     );
 
-    return { bookingId, totalAmount, platformFee };
+    return { 
+        bookingId, 
+        totalAmount: grandTotal, 
+        platformFee,
+        storageFee,
+        logisticsFee,
+        vatAmount
+    };
 }
 
 export async function cancelBookingBySeeker(

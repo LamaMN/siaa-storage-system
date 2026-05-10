@@ -120,8 +120,20 @@ function PaymentPageContent() {
     }
 
     const totalAmount = booking?.TotalAmount || 0;
-    const tax = totalAmount * 0.15;
-    const base = totalAmount - tax;
+    const platformFee = booking?.PlatformFee || 0;
+    let logisticsFee = 0;
+    if (booking?.SpecialRequests) {
+        try {
+            const sr = JSON.parse(booking.SpecialRequests);
+            if (sr.type === 'partner_pickup') {
+                const prices: any = { aramex: 50, smsa: 60, spl: 55 };
+                logisticsFee = prices[sr.company] || 0;
+            }
+        } catch (e) { }
+    }
+    const totalBeforeVat = totalAmount / 1.15;
+    const tax = totalAmount - totalBeforeVat;
+    const storageFee = totalBeforeVat - logisticsFee - platformFee;
 
     return (
         <section className="payment-section">
@@ -201,8 +213,18 @@ function PaymentPageContent() {
                         ) : (
                             <>
                                 <div className="payment-summary-item">
-                                    <span className="payment-summary-item-label">{t.storageFees}</span>
-                                    <span className="payment-summary-item-value">{formatPrice(base)} SAR</span>
+                                    <span className="payment-summary-item-label">{t.storageFee}</span>
+                                    <span className="payment-summary-item-value">{formatPrice(storageFee)} SAR</span>
+                                </div>
+                                {logisticsFee > 0 && (
+                                    <div className="payment-summary-item">
+                                        <span className="payment-summary-item-label">{t.logistics}</span>
+                                        <span className="payment-summary-item-value">{formatPrice(logisticsFee)} SAR</span>
+                                    </div>
+                                )}
+                                <div className="payment-summary-item">
+                                    <span className="payment-summary-item-label">{t.platformFee}</span>
+                                    <span className="payment-summary-item-value">{formatPrice(platformFee)} SAR</span>
                                 </div>
                                 <div className="payment-summary-item">
                                     <span className="payment-summary-item-label">{t.vat}</span>

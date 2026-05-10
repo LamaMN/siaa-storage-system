@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
             climateControlled: searchParams.get('climateControlled') === '1' ? true : undefined,
             securitySystem: searchParams.get('security') === '1' ? true : undefined,
             parkingAvailable: searchParams.get('parking') === '1' ? true : undefined,
-            sortBy: (searchParams.get('sortBy') as SpaceSearchFilters['sortBy']) || 'match',
+            rentalDuration: (searchParams.get('rentalDuration') as any) || undefined,
+            startDate: searchParams.get('startDate') || undefined,
             page,
             limit,
         };

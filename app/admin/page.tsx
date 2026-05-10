@@ -655,7 +655,13 @@ export default function AdminPage() {
                                             </div>
                                             <div className="history-item-details">
                                                 <p style={{ fontWeight: '500', color: '#1a365d' }}>
-                                                    <i className="fa-solid fa-tag"></i> Category: {ticket.Category}
+                                                    <i className="fa-solid fa-tag"></i> {t.category}: {
+                                                        ticket.Category === 'Booking' ? t.categoryBooking :
+                                                        ticket.Category === 'Payment' ? t.categoryPayment :
+                                                        ticket.Category === 'Technical' ? t.categoryTechnical :
+                                                        ticket.Category === 'Other' ? t.categoryOther :
+                                                        ticket.Category
+                                                    }
                                                 </p>
                                                 <p style={{ color: '#4a5568', marginTop: '0.5rem', marginBottom: '0.5rem', background: '#f7fafc', padding: '1rem', borderRadius: '8px', fontStyle: 'italic' }}>
                                                     "{ticket.Description}"
