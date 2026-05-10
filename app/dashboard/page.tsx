@@ -229,7 +229,7 @@ export default function DashboardPage() {
     async function loadData(user: User, t: string) {
         setHistoryLoading(true);
         try {
-            // Load profile
+            // Load profile first (needed for settings + profile pic)
             const profRes = await fetch(`/api/profile/${user.userType}/${user.id}`, { headers: authHeaders(t) });
             if (profRes.ok) {
                 const profData = await profRes.json();
@@ -268,46 +268,33 @@ export default function DashboardPage() {
                     prefLocs: p.PreferredLocations ? p.PreferredLocations.split(',').filter(Boolean) : [],
                     iban: p.IBAN || '',
                     bankName: p.BankName || '',
-                    accountName: p.BankAccountNumber || '', // Reusing this for accountName display if needed
+                    accountName: p.BankAccountNumber || '',
                 });
             }
 
-            // Load history
-            if (user.userType === 'seeker') {
-                const bkRes = await fetch(`/api/seeker/${user.id}/bookings`, { headers: authHeaders(t) });
-                if (bkRes.ok) {
-                    const bkData = await bkRes.json();
-                    setSeekerBookings(bkData.bookings || []);
-                }
-            } else {
-                const spRes = await fetch(`/api/provider/${user.id}/spaces`, { headers: authHeaders(t) });
-                if (spRes.ok) {
-                    const spData = await spRes.json();
-                    setProviderSpaces(spData.spaces || []);
-                }
-                const pbRes = await fetch(`/api/provider/${user.id}/bookings`, { headers: authHeaders(t) });
-                if (pbRes.ok) {
-                    const pbData = await pbRes.json();
-                    setProviderBookings(pbData.bookings || []);
-                }
-                // Load calendar data
-                const calRes = await fetch(`/api/provider/${user.id}/calendar`, { headers: authHeaders(t) });
-                if (calRes.ok) {
-                    const calData = await calRes.json();
-                    setCalendarBookings(calData.bookings || []);
-                }
-            }
+            // Load remaining data in parallel
+            const statsUrl = user.userType === 'seeker'
+                ? `/api/seeker/${user.id}/statistics`
+                : `/api/provider/${user.id}/statistics`;
 
-            // Load stats
-            const stRes = await fetch(
-                user.userType === 'seeker'
-                    ? `/api/seeker/${user.id}/statistics`
-                    : `/api/provider/${user.id}/statistics`,
-                { headers: authHeaders(t) }
-            );
-            if (stRes.ok) {
-                const stData = await stRes.json();
-                setStats(stData.statistics || {});
+            if (user.userType === 'seeker') {
+                const [bkRes, stRes] = await Promise.all([
+                    fetch(`/api/seeker/${user.id}/bookings`, { headers: authHeaders(t) }),
+                    fetch(statsUrl, { headers: authHeaders(t) }),
+                ]);
+                if (bkRes.ok) { const d = await bkRes.json(); setSeekerBookings(d.bookings || []); }
+                if (stRes.ok) { const d = await stRes.json(); setStats(d.statistics || {}); }
+            } else {
+                const [spRes, pbRes, calRes, stRes] = await Promise.all([
+                    fetch(`/api/provider/${user.id}/spaces`, { headers: authHeaders(t) }),
+                    fetch(`/api/provider/${user.id}/bookings`, { headers: authHeaders(t) }),
+                    fetch(`/api/provider/${user.id}/calendar`, { headers: authHeaders(t) }),
+                    fetch(statsUrl, { headers: authHeaders(t) }),
+                ]);
+                if (spRes.ok) { const d = await spRes.json(); setProviderSpaces(d.spaces || []); }
+                if (pbRes.ok) { const d = await pbRes.json(); setProviderBookings(d.bookings || []); }
+                if (calRes.ok) { const d = await calRes.json(); setCalendarBookings(d.bookings || []); }
+                if (stRes.ok) { const d = await stRes.json(); setStats(d.statistics || {}); }
             }
         } finally {
             setHistoryLoading(false);
@@ -631,7 +618,7 @@ export default function DashboardPage() {
 
                 {/* Main content */}
                 <main className="dashboard-main">
-                    <div className="container">
+                    <div>
                         <div className="dashboard-header">
                             <div className="dashboard-title-box">
                                 <h1 className="dashboard-title">{welcomeMessage}</h1>
