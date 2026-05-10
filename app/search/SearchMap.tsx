@@ -2,7 +2,15 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
+import { useTranslateToArabic } from '@/lib/useTranslateToArabic';
+import LanguageToggle from '@/app/components/LanguageToggle';
+import { translations, type Language } from '@/lib/translations';
+/** Read lang cookie synchronously (client-side). Safe because cookie only changes on full reload. */
+function getCurrentLang(): Language {
+    if (typeof document === 'undefined') return 'en';
+    const match = document.cookie.match(/(?:^|; )lang=([^;]+)/);
+    return match?.[1] === 'ar' ? 'ar' : 'en';
+}
 const NEIGHBORHOODS: Record<string, { lat: number; lng: number; label: string }> = {
     'al-salama': { lat: 21.5550, lng: 39.1728, label: 'Al-Salama' },
     'al-rawdah': { lat: 21.5620, lng: 39.1850, label: 'Al-Rawdah' },
@@ -23,6 +31,8 @@ const NEIGHBORHOODS: Record<string, { lat: number; lng: number; label: string }>
 const JEDDAH_CENTER: [number, number] = [21.5433, 39.1728];
 
 export default function SearchMap({ spaces }: { spaces: any[] }) {
+    const lang = getCurrentLang();
+    const t = translations[lang];
     const mapRef = useRef<L.Map | null>(null);
     const markersRef = useRef<L.Marker[]>([]);
     const mapContainerId = 'search-map-container';
@@ -81,9 +91,13 @@ export default function SearchMap({ spaces }: { spaces: any[] }) {
                 .bindPopup(`
                     <strong>${space.Title || 'Storage Space'}</strong><br>
                     ${space.SpaceType || ''} · ${space.Size || '?'} m²<br>
-                    <b>${space.PricePerMonth !== undefined ? (space.PricePerMonth >= 1000 ? (space.PricePerMonth / 1000).toFixed(1) + 'k' : space.PricePerMonth.toFixed(0)) : '?'} SAR/mo</b><br>
-                    <button onclick="window.dispatchEvent(new CustomEvent('openSpaceModal', {detail: ${space.SpaceID}}))" class="btn btn-dark btn-small" style="width: 100%; margin-top: 8px; padding: 4px; font-size: 11px;">View Details</button>
-                `);
+<b>
+${space.PricePerMonth !== undefined
+                        ? (space.PricePerMonth >= 1000
+                            ? (space.PricePerMonth / 1000).toFixed(1) + 'k'
+                            : space.PricePerMonth.toFixed(0))
+                        : '?'} ${t.sarPerMonth}
+</b><br><button onclick="window.dispatchEvent(new CustomEvent('openSpaceModal', {detail: ${space.SpaceID}}))" class="btn btn-dark btn-small" style="width: 100%; margin-top: 8px; padding: 4px; font-size: 11px;">${t.viewDetails}</button>                `);
 
             markersRef.current.push(marker);
         });

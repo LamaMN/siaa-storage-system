@@ -226,9 +226,12 @@ function PaymentPageContent() {
                                     <span className="payment-summary-item-label">{t.platformFee}</span>
                                     <span className="payment-summary-item-value">{formatPrice(platformFee)} SAR</span>
                                 </div>
+
                                 <div className="payment-summary-item">
                                     <span className="payment-summary-item-label">{t.vat}</span>
-                                    <span className="payment-summary-item-value">{formatPrice(tax)} SAR</span>
+                                    <span className="payment-summary-item-value">
+                                        {formatPrice(tax)} {t.sar}
+                                    </span>
                                 </div>
                             </>
                         )}
@@ -269,7 +272,7 @@ export default function PaymentPage() {
     return (
         <>
             <header className="header">
-                
+
                 <div className="container">
                     <div className="header-content">
                         <div className="logo">
@@ -281,7 +284,7 @@ export default function PaymentPage() {
                             <a href="/#features">{t.features}</a>
                             <a href="/#how-it-works">{t.howItWorks}</a>
                         </nav>
-                        
+
                         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 20px' }}>
                             <LanguageToggle />
                         </div>

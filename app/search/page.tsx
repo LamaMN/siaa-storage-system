@@ -119,7 +119,7 @@ const NEIGHBORHOOD_LABEL: Record<string, { en: string; ar: string }> = {
 };
 
 export default function SearchPage() {
-    const t = getT();
+
     const [showLocationModal, setShowLocationModal] = useState(false);
     const [selectedCity, setSelectedCity] = useState('');
     const [spaces, setSpaces] = useState<SpaceResult[]>([]);
@@ -193,7 +193,16 @@ export default function SearchPage() {
         // Sort
         sortBy: 'match',
     });
+    const [lang, setLang] = useState<'en' | 'ar'>('en');
 
+    useEffect(() => {
+        const match = document.cookie.match(/(?:^|; )lang=([^;]+)/);
+        if (match?.[1] === 'ar') {
+            setLang('ar');
+        }
+    }, []);
+
+    const t = translations[lang];
     const [priceRange, setPriceRange] = useState({ min: 80, max: 5000 });
     const [priceRangeLoading, setPriceRangeLoading] = useState(true);
     const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([]);
@@ -257,14 +266,14 @@ export default function SearchPage() {
     }, []);
 
     useEffect(() => {
-    const savedSpaceId = sessionStorage.getItem('openSpaceId');
-    if (!savedSpaceId || spaces.length === 0) return;
+        const savedSpaceId = sessionStorage.getItem('openSpaceId');
+        if (!savedSpaceId || spaces.length === 0) return;
 
-    const space = spaces.find(s => s.SpaceID === Number(savedSpaceId));
-    if (space) {
-        sessionStorage.removeItem('openSpaceId');
-        openDetailsModal(space);
-    }
+        const space = spaces.find(s => s.SpaceID === Number(savedSpaceId));
+        if (space) {
+            sessionStorage.removeItem('openSpaceId');
+            openDetailsModal(space);
+        }
     }, [spaces]);
 
     function handleCitySelect(city: string) {
@@ -326,7 +335,7 @@ export default function SearchPage() {
             const token = localStorage.getItem('siaaToken');
 
             const res = await fetch(`/api/spaces?${params.toString()}`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
             const json = await res.json();
             const data = json.data || json; // Handle both cases based on API style
@@ -372,7 +381,7 @@ export default function SearchPage() {
             const token = localStorage.getItem('siaaToken');
 
             const res = await fetch(`/api/spaces?${params.toString()}`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
             const json = await res.json();
             const data = json.data || json;
@@ -484,16 +493,16 @@ export default function SearchPage() {
         // Pre-fetch reviews
         fetchSpaceReviews(space.SpaceID);
     }
-    
+
     function normalizeSpace(space: SpaceResult): SpaceResult {
-    return {
-        ...space,
-        FavoriteCount: Number(space.FavoriteCount || 0),
-        IsFavorited: space.IsFavorited === true || Number(space.IsFavorited) === 1,
-    };
+        return {
+            ...space,
+            FavoriteCount: Number(space.FavoriteCount || 0),
+            IsFavorited: space.IsFavorited === true || Number(space.IsFavorited) === 1,
+        };
     }
 
-        async function fetchFavorites() {
+    async function fetchFavorites() {
         const token = localStorage.getItem('siaaToken');
         if (!token) {
             window.location.href = '/login';
@@ -504,7 +513,7 @@ export default function SearchPage() {
 
         try {
             const res = await fetch('/api/favorites', {
-            headers: { Authorization: `Bearer ${token}` },
+                headers: { Authorization: `Bearer ${token}` },
             });
 
             const json = await res.json();
@@ -515,9 +524,9 @@ export default function SearchPage() {
         } finally {
             setFavoritesLoading(false);
         }
-        }
+    }
 
-        async function toggleFavorite(spaceId: number, isLiked?: boolean) {
+    async function toggleFavorite(spaceId: number, isLiked?: boolean) {
         const token = localStorage.getItem('siaaToken');
         if (!token) {
             window.location.href = '/login';
@@ -541,32 +550,32 @@ export default function SearchPage() {
 
         setSpaces(prev =>
             prev.map(space =>
-            space.SpaceID === spaceId
-                ? { ...space, IsFavorited: data.IsFavorited, FavoriteCount: updatedCount }
-                : space
+                space.SpaceID === spaceId
+                    ? { ...space, IsFavorited: data.IsFavorited, FavoriteCount: updatedCount }
+                    : space
             )
         );
 
         setTranslatedSpaces(prev =>
             prev.map(space =>
-            space.SpaceID === spaceId
-                ? { ...space, IsFavorited: data.IsFavorited, FavoriteCount: updatedCount }
-                : space
+                space.SpaceID === spaceId
+                    ? { ...space, IsFavorited: data.IsFavorited, FavoriteCount: updatedCount }
+                    : space
             )
         );
 
         setFavorites(prev =>
             data.IsFavorited
-            ? prev
-            : prev.filter(space => space.SpaceID !== spaceId)
+                ? prev
+                : prev.filter(space => space.SpaceID !== spaceId)
         );
 
         setModalSpace(prev =>
             prev && prev.SpaceID === spaceId
-            ? { ...prev, IsFavorited: data.IsFavorited, FavoriteCount: updatedCount }
-            : prev
+                ? { ...prev, IsFavorited: data.IsFavorited, FavoriteCount: updatedCount }
+                : prev
         );
-        }
+    }
 
     async function openProviderPopup(providerId: number) {
         if (!providerId) return;
@@ -631,7 +640,7 @@ export default function SearchPage() {
 
                             <LanguageToggle />
                         </div>
-                        
+
                     </div>
                 </div>
             </header>
@@ -713,7 +722,7 @@ export default function SearchPage() {
                                                     {priceRangeLoading ? (
                                                         <span>- - -</span>
                                                     ) : (
-                                                        <><span>{priceRange.min} SAR</span><span>{filters.maxPrice} SAR</span></>
+                                                        <><span>{priceRange.min} {t.sar}</span><span>{filters.maxPrice} {t.sar}</span></>
                                                     )}
                                                 </span>
                                             </div>
@@ -914,59 +923,59 @@ export default function SearchPage() {
                                                     </p>
                                                 </div>
                                                 <div className="space-card-price" style={{ textAlign: 'right', flexShrink: 0 }}>
-                                                    <span className="price-amount" style={{ display: 'block', fontSize: '18px', fontWeight: 800, color: '#ff6b35' }}>{space.PricePerMonth || '?'} SAR</span>
-                                                    <span className="price-unit" style={{ fontSize: '11px', color: '#a0aec0' }}>/ mo</span>
+                                                    <span className="price-amount" style={{ display: 'block', fontSize: '18px', fontWeight: 800, color: '#ff6b35' }}>{space.PricePerMonth || '?'} {t.sar}</span>
+                                                    <span className="price-unit" style={{ fontSize: '11px', color: '#a0aec0' }}>/ {t.sar}</span>
                                                 </div>
                                             </div>
                                             <div
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                marginTop: '6px',
-                                            }}
-                                            >
-                                            {/* Likes count */}
-                                            <div
                                                 style={{
-                                                fontSize: '12px',
-                                                color: '#4a5568',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    marginTop: '6px',
                                                 }}
                                             >
-                                                <i
-                                                className="fa-solid fa-heart"
-                                                style={{ color: '#ff6b35', fontSize: '11px' }}
-                                                ></i>
-                                                {Number(space.FavoriteCount || 0)}
-                                            </div>
+                                                {/* Likes count */}
+                                                <div
+                                                    style={{
+                                                        fontSize: '12px',
+                                                        color: '#4a5568',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                    }}
+                                                >
+                                                    <i
+                                                        className="fa-solid fa-heart"
+                                                        style={{ color: '#ff6b35', fontSize: '11px' }}
+                                                    ></i>
+                                                    {Number(space.FavoriteCount || 0)}
+                                                </div>
 
-                                            {/* Like button */}
-                                            <button
-                                                className="btn btn-outline"
-                                                style={{
-                                                padding: '5px 10px',
-                                                fontSize: '12px',
-                                                borderRadius: '999px',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px',
-                                                }}
-                                                onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleFavorite(space.SpaceID, space.IsFavorited);
-                                                }}
-                                            >
-                                                <i
-                                                className={space.IsFavorited ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}
-                                                style={{
-                                                    color: space.IsFavorited ? '#ff6b35' : '#ff6b35',
-                                                }}
-                                                ></i>
-                                            </button>
+                                                {/* Like button */}
+                                                <button
+                                                    className="btn btn-outline"
+                                                    style={{
+                                                        padding: '5px 10px',
+                                                        fontSize: '12px',
+                                                        borderRadius: '999px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                    }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleFavorite(space.SpaceID, space.IsFavorited);
+                                                    }}
+                                                >
+                                                    <i
+                                                        className={space.IsFavorited ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}
+                                                        style={{
+                                                            color: space.IsFavorited ? '#ff6b35' : '#ff6b35',
+                                                        }}
+                                                    ></i>
+                                                </button>
                                             </div>
                                             <div className="space-card-meta" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
                                                 <div className="space-meta-item" style={{ fontSize: '12px', color: '#4a5568', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -978,9 +987,23 @@ export default function SearchPage() {
                                                     {space.SpaceType} &middot; {space.Size} m²
                                                 </div>
                                                 {space.MatchScore !== undefined && (
-                                                    <div className="space-meta-item match-score" style={{ fontSize: '12px', color: '#e8750a', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
-                                                        <i className="fa-solid fa-bolt" style={{ color: '#ff6b35', fontSize: '10px' }}></i>
-                                                        {space.MatchScore}% Match
+                                                    <div
+                                                        className="space-meta-item match-score"
+                                                        style={{
+                                                            fontSize: '12px',
+                                                            color: '#e8750a',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            fontWeight: 700
+                                                        }}
+                                                    >
+                                                        <i
+                                                            className="fa-solid fa-bolt"
+                                                            style={{ color: '#ff6b35', fontSize: '10px' }}
+                                                        ></i>
+
+                                                        {Math.min(space.MatchScore, 100)}% {t.match}
                                                     </div>
                                                 )}
                                             </div>
@@ -1089,25 +1112,25 @@ export default function SearchPage() {
                                             <i className="fa-solid fa-location-dot" style={{ color: '#ff6b35' }}></i>
                                             {modalSpace.City}{modalSpace.AddressLine1 ? `, ${modalSpace.AddressLine1}` : ''}
                                             <button
-                                            onClick={() => toggleFavorite(modalSpace.SpaceID, modalSpace.IsFavorited)}
-                                            style={{
-                                                border: '1px solid #e2e8f0',
-                                                background: '#fff',
-                                                borderRadius: '999px',
-                                                padding: '8px 14px',
-                                                cursor: 'pointer',
-                                                color: '#ff6b35',
-                                                fontWeight: 700,
-                                            }}
+                                                onClick={() => toggleFavorite(modalSpace.SpaceID, modalSpace.IsFavorited)}
+                                                style={{
+                                                    border: '1px solid #e2e8f0',
+                                                    background: '#fff',
+                                                    borderRadius: '999px',
+                                                    padding: '8px 14px',
+                                                    cursor: 'pointer',
+                                                    color: '#ff6b35',
+                                                    fontWeight: 700,
+                                                }}
                                             >
-                                            <i className={modalSpace.IsFavorited ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}></i>
-                                            {' '}
-                                            {Number(modalSpace.FavoriteCount || 0)}
+                                                <i className={modalSpace.IsFavorited ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}></i>
+                                                {' '}
+                                                {Number(modalSpace.FavoriteCount || 0)}
                                             </button>
                                         </p>
                                     </div>
                                     <button onClick={() => setModalSpace(null)} style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#a0aec0', cursor: 'pointer', flexShrink: 0 }}>&times;</button>
-                               
+
                                 </div>
 
                                 {/* Details View */}
@@ -1168,16 +1191,16 @@ export default function SearchPage() {
                                             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                                                 {modalSpace.ProviderPhone && (
                                                     <a href={`tel:${modalSpace.ProviderPhone}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#4a5568', textDecoration: 'none', padding: '6px 12px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', transition: 'all 0.2s ease' }}
-                                                       onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff6b35'; e.currentTarget.style.color = '#ff6b35'; }}
-                                                       onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#4a5568'; }}>
+                                                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff6b35'; e.currentTarget.style.color = '#ff6b35'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#4a5568'; }}>
                                                         <i className="fa-solid fa-phone" style={{ color: '#ff6b35', fontSize: '12px' }}></i>
                                                         {modalSpace.ProviderPhone}
                                                     </a>
                                                 )}
                                                 {modalSpace.ProviderEmail && (
                                                     <a href={`mailto:${modalSpace.ProviderEmail}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#4a5568', textDecoration: 'none', padding: '6px 12px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', transition: 'all 0.2s ease' }}
-                                                       onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff6b35'; e.currentTarget.style.color = '#ff6b35'; }}
-                                                       onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#4a5568'; }}>
+                                                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff6b35'; e.currentTarget.style.color = '#ff6b35'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#4a5568'; }}>
                                                         <i className="fa-solid fa-envelope" style={{ color: '#ff6b35', fontSize: '12px' }}></i>
                                                         {modalSpace.ProviderEmail}
                                                     </a>
@@ -1221,7 +1244,7 @@ export default function SearchPage() {
                                                 <i className="fa-solid fa-user-tie" style={{ marginRight: '8px', color: '#ff6b35' }}></i>
                                                 {(t as unknown as Record<string, string>).providerContactTitle || 'Provider Information'}
                                             </h3>
-                                            
+
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                                                 <div>
                                                     <div style={{ fontSize: '12px', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{(t as unknown as Record<string, string>).providerNameLabel || 'Name'}</div>
@@ -1425,81 +1448,149 @@ export default function SearchPage() {
                 />
             )}
             {showFavorites && (
-            <div className="review-modal-overlay" style={{ zIndex: 2000 }}>
-                <div className="review-modal" style={{ maxWidth: '720px', width: '92%' }}>
-                <div className="review-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3>My Favorite Spaces</h3>
-                    <button onClick={() => setShowFavorites(false)} style={{ border: 'none', background: 'transparent', fontSize: '24px', cursor: 'pointer' }}>
-                    &times;
-                    </button>
-                </div>
+                <div className="review-modal-overlay" style={{ zIndex: 2000 }}>
+                    <div className="review-modal" style={{ maxWidth: '720px', width: '92%' }}>
+                        <div
+                            className="review-modal-header"
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                        >
+                            <h3>{t.myFavoriteSpaces}</h3>
 
-                <div className="review-modal-body">
-                    {favoritesLoading && <Loader />}
+                            <button
+                                onClick={() => setShowFavorites(false)}
+                                style={{
+                                    border: 'none',
+                                    background: 'transparent',
+                                    fontSize: '24px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                &times;
+                            </button>
+                        </div>
 
-                    {!favoritesLoading && favorites.length === 0 && (
-                    <p style={{ color: '#718096' }}>No favorite spaces yet.</p>
-                    )}
+                        <div className="review-modal-body">
+                            {favoritesLoading && <Loader />}
 
-                    {!favoritesLoading && favorites.map(space => (
-                    <div
-                        key={space.SpaceID}
-                        style={{
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        padding: '12px',
-                        marginBottom: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        }}
-                    >
-                        {/* Thumbnail */}
-                        <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {space.FirstImageID ? (
-                                <img 
-                                    src={`/api/images/space/${space.FirstImageID}`} 
-                                    alt={space.Title} 
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                />
-                            ) : (
-                                <i className="fa-solid fa-image" style={{ color: '#a0aec0' }}></i>
+                            {!favoritesLoading && favorites.length === 0 && (
+                                <p style={{ color: '#718096' }}>
+                                    {t.noFavoriteSpaces}
+                                </p>
                             )}
-                        </div>
 
-                        <div style={{ flex: 1 }}>
-                        <h4 style={{ margin: '0 0 4px 0', color: '#1a365d', fontSize: '15px' }}>{space.Title}</h4>
-                        <p style={{ margin: 0, color: '#718096', fontSize: '13px' }}>
-                            {space.City} {space.AddressLine1 ? `, ${space.AddressLine1}` : ''}
-                        </p>
-                        <p style={{ margin: '6px 0 0 0', color: '#ff6b35', fontSize: '13px', fontWeight: 700 }}>
-                            <i className="fa-solid fa-heart"></i> {Number(space.FavoriteCount || 0)}
-                        </p>
-                        </div>
+                            {!favoritesLoading && favorites.map(space => (
+                                <div
+                                    key={space.SpaceID}
+                                    style={{
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '12px',
+                                        padding: '12px',
+                                        marginBottom: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                    }}
+                                >
+                                    {/* Thumbnail */}
+                                    <div
+                                        style={{
+                                            width: '60px',
+                                            height: '60px',
+                                            borderRadius: '8px',
+                                            overflow: 'hidden',
+                                            flexShrink: 0,
+                                            background: '#edf2f7',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}
+                                    >
+                                        {space.FirstImageID ? (
+                                            <img
+                                                src={`/api/images/space/${space.FirstImageID}`}
+                                                alt={space.Title}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover'
+                                                }}
+                                            />
+                                        ) : (
+                                            <i
+                                                className="fa-solid fa-image"
+                                                style={{ color: '#a0aec0' }}
+                                            ></i>
+                                        )}
+                                    </div>
 
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button
-                            className="btn btn-outline"
-                            onClick={() => toggleFavorite(space.SpaceID, true)}
-                        >
-                            Remove
-                        </button>
+                                    <div style={{ flex: 1 }}>
+                                        <h4
+                                            style={{
+                                                margin: '0 0 4px 0',
+                                                color: '#1a365d',
+                                                fontSize: '15px'
+                                            }}
+                                        >
+                                            {space.Title}
+                                        </h4>
 
-                        <button
-                            className="btn btn-dark"
-                            onClick={() => {
-                            setShowFavorites(false);
-                            openDetailsModal(space);
-                            }}
-                        >
-                            View Details
-                        </button>
+                                        <p
+                                            style={{
+                                                margin: 0,
+                                                color: '#718096',
+                                                fontSize: '13px'
+                                            }}
+                                        >
+                                            {space.City}
+                                            {space.AddressLine1
+                                                ? `, ${space.AddressLine1}`
+                                                : ''}
+                                        </p>
+
+                                        <p
+                                            style={{
+                                                margin: '6px 0 0 0',
+                                                color: '#ff6b35',
+                                                fontSize: '13px',
+                                                fontWeight: 700
+                                            }}
+                                        >
+                                            <i className="fa-solid fa-heart"></i>{' '}
+                                            {Number(space.FavoriteCount || 0)}
+                                        </p>
+                                    </div>
+
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            gap: '8px',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <button
+                                            className="btn btn-outline"
+                                            onClick={() =>
+                                                toggleFavorite(space.SpaceID, true)
+                                            }
+                                        >
+                                            {t.remove}
+                                        </button>
+
+                                        <button
+                                            className="btn btn-dark"
+                                            onClick={() => {
+                                                setShowFavorites(false);
+                                                openDetailsModal(space);
+                                            }}
+                                        >
+                                            {t.viewDetails}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                    ))}
                 </div>
-                </div>
-            </div>
             )}
             <footer className="footer">
                 <div className="container">

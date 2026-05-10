@@ -140,11 +140,11 @@ export default function Space3DVisualizer({
 
   // Slider bounds for the selected package
   const xMin = selectedPkg ? -((spaceWidth - selectedPkg.w) / 2) : 0;
-  const xMax = selectedPkg ?  ((spaceWidth - selectedPkg.w) / 2) : 0;
+  const xMax = selectedPkg ? ((spaceWidth - selectedPkg.w) / 2) : 0;
   const yMin = selectedPkg ? selectedPkg.h / 2 : 0;
   const yMax = selectedPkg ? spaceHeight - selectedPkg.h / 2 : 0;
   const zMin = selectedPkg ? -((spaceLength - selectedPkg.l) / 2) : 0;
-  const zMax = selectedPkg ?  ((spaceLength - selectedPkg.l) / 2) : 0;
+  const zMax = selectedPkg ? ((spaceLength - selectedPkg.l) / 2) : 0;
 
   return (
     <div style={{
@@ -249,20 +249,19 @@ export default function Space3DVisualizer({
             <div style={{ background: '#fff', border: '2px solid #ff6b35', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#1a365d' }}>
-                  📦 Move Package
-                </h3>
+                  {t.visualizerMovePackage}                </h3>
                 <button
                   onClick={removeSelected}
                   style={{ background: '#fff5f5', border: '1px solid #fc8181', color: '#e53e3e', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
                 >
-                  Remove
+                  {t.visualizerRemove}
                 </button>
               </div>
 
               {/* X slider */}
               <div style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '12px', color: '#4a5568', fontWeight: 600 }}>← Left / Right →</label>
+                  <label style={{ fontSize: '12px', color: '#4a5568', fontWeight: 600 }}>{t.visualizerLeftRight}</label>
                   <span style={{ fontSize: '12px', color: '#718096' }}>{selectedPkg.x.toFixed(2)} m</span>
                 </div>
                 <input
@@ -279,8 +278,8 @@ export default function Space3DVisualizer({
               {/* Y slider */}
               <div style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '12px', color: '#4a5568', fontWeight: 600 }}>↓ Down / Up ↑</label>
-                  <span style={{ fontSize: '12px', color: '#718096' }}>{(selectedPkg.y - selectedPkg.h / 2).toFixed(2)} m from floor</span>
+                  <label style={{ fontSize: '12px', color: '#4a5568', fontWeight: 600 }}>{t.visualizerDownUp}</label>
+                  <span style={{ fontSize: '12px', color: '#718096' }}>{(selectedPkg.y - selectedPkg.h / 2).toFixed(2)} {t.visualizerMeter} {t.visualizerFromFloor}</span>
                 </div>
                 <input
                   className="pos-slider"
@@ -296,7 +295,7 @@ export default function Space3DVisualizer({
               {/* Z slider */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '12px', color: '#4a5568', fontWeight: 600 }}>← Front / Back →</label>
+                  <label style={{ fontSize: '12px', color: '#4a5568', fontWeight: 600 }}>{t.visualizerFrontBack}</label>
                   <span style={{ fontSize: '12px', color: '#718096' }}>{selectedPkg.z.toFixed(2)} m</span>
                 </div>
                 <input
@@ -314,7 +313,7 @@ export default function Space3DVisualizer({
 
           {!selectedPkg && packages.length > 0 && (
             <p style={{ fontSize: '12px', color: '#a0aec0', textAlign: 'center', margin: '0 0 20px 0' }}>
-              Click a package in the 3D view to select and move it
+              {t.visualizerClickPackageHint}
             </p>
           )}
 
@@ -388,7 +387,7 @@ export default function Space3DVisualizer({
           </Canvas>
           <div style={{ position: 'absolute', bottom: '20px', left: '0', width: '100%', textAlign: 'center', pointerEvents: 'none' }}>
             <span style={{ background: 'rgba(255,255,255,0.8)', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 600, color: '#4a5568' }}>
-              {selectedId ? '📦 Package selected — use sliders to move it' : t.visualizerDragHint}
+              {selectedId ? t.visualizerPackageSelectedHint : t.visualizerDragHint}
             </span>
           </div>
         </div>

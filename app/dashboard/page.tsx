@@ -554,11 +554,11 @@ export default function DashboardPage() {
                         <div className="logo">
                             <img src="/Media/Logo.png" alt={t.logoAlt} className="logo-img" />
                         </div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '6px 20px' }}>
-                                <LanguageToggle />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '6px 20px' }}>
+                            <LanguageToggle />
                         </div>
                     </div>
-                    
+
                 </div>
             </header>
 
@@ -855,7 +855,7 @@ export default function DashboardPage() {
                                                             onClick={() => setInvoiceBooking(booking)}
                                                         >
                                                             <i className="fa-solid fa-file-invoice" style={{ marginRight: '4px' }}></i>
-                                                            Invoice
+                                                            {t.invoiceTitle}
                                                         </button>
                                                         {booking.BookingStatus === 'Pending' && (
                                                             <button
@@ -904,15 +904,16 @@ export default function DashboardPage() {
                                                         <p><i className="fa-solid fa-location-dot"></i> {space.City}, {space.AddressLine1}</p>
                                                         <p><i className="fa-solid fa-box"></i> {space.SpaceType} · {space.Size} m²</p>
                                                         <p>
-                                                        <i className="fa-solid fa-heart" style={{ color: '#ff6b35' }}></i>
-                                                        {' '}
-                                                        {Number(space.FavoriteCount || 0)} {t.favorites}
-                                                        {' '}·{' '}
-                                                        {space.TotalBookings} {t.bookings}
+                                                            <i className="fa-solid fa-heart" style={{ color: '#ff6b35' }}></i>
+                                                            {' '}
+                                                            {Number(space.FavoriteCount || 0)} {t.favorites}
+                                                            {' '}·{' '}
+                                                            {space.TotalBookings} {t.bookings}
                                                         </p>                                                    </div>
                                                     <div className="history-item-footer">
-                                                        <span className="history-item-price">{formatPrice(space.PricePerMonth)} SAR/month</span>
-                                                        <span className="history-item-date">{t.listed} {formatDate(space.CreatedAt)}</span>
+                                                        <span className="history-item-price">
+                                                            {formatPrice(space.PricePerMonth)} {t.sarPerMonth}
+                                                        </span>                                                        <span className="history-item-date">{t.listed} {formatDate(space.CreatedAt)}</span>
                                                     </div>
                                                     <div className="history-item-footer" style={{ marginTop: '0.5rem', justifyContent: 'flex-end', gap: '0.5rem' }}>
                                                         <button className="btn btn-outline btn-small" style={{ borderColor: '#3b82f6', color: '#3b82f6' }}
@@ -1025,8 +1026,10 @@ export default function DashboardPage() {
                                                     <div className="history-item-details">
                                                         <p><i className="fa-solid fa-user"></i>  {t.seeker}: {booking.SeekerName} · {booking.SeekerEmail}</p>
                                                         <p><i className="fa-solid fa-calendar"></i> {formatDate(booking.StartDate)} - {formatDate(booking.EndDate)}</p>
-                                                        <p><i className="fa-solid fa-money-bill"></i> {formatPrice(booking.TotalAmount)} SAR</p>
-                                                    </div>
+                                                        <p>
+                                                            <i className="fa-solid fa-money-bill"></i>
+                                                            {formatPrice(booking.TotalAmount)} {t.sar}
+                                                        </p>                                                    </div>
                                                     {booking.BookingStatus === 'Pending' && (
                                                         <div className="history-item-footer" style={{ gap: '0.5rem' }}>
                                                             <button className="btn btn-dark btn-small"
@@ -1229,7 +1232,7 @@ export default function DashboardPage() {
                                 <div className="stat-card">
                                     <div className="stat-icon"><i className="fa-solid fa-chart-line"></i></div>
                                     <div className="stat-content">
-                                        <h3 className="stat-value">{formatPrice(isProvider ? stats.TotalRevenue : stats.TotalSpent)} SAR</h3>
+                                        <h3 className="stat-value">{formatPrice(isProvider ? stats.TotalRevenue : stats.TotalSpent)} {t.sar}</h3>
                                         <p className="stat-label">{isProvider ? t.totalRevenue : t.totalSpent}</p>
                                     </div>
                                 </div>
@@ -1841,7 +1844,7 @@ export default function DashboardPage() {
                                     if (!invoiceEl) return;
                                     const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
                                         .map(el => el.outerHTML).join('\n');
-                                    
+
                                     const safeSpaceTitle = invoiceBooking.SpaceTitle?.replace(/\s+/g, '_') || 'Space';
                                     const docTitle = `Booking_${invoiceBooking.BookingID}_${safeSpaceTitle}`;
 
@@ -1854,7 +1857,7 @@ export default function DashboardPage() {
                                 <button className="invoice-download-btn" onClick={async () => {
                                     const invoiceEl = document.getElementById('invoice-content');
                                     if (!invoiceEl) return;
-                                    
+
                                     // Make a clone to avoid altering the UI during PDF generation
                                     const clone = invoiceEl.cloneNode(true) as HTMLElement;
                                     // Remove footer buttons from clone
@@ -1862,7 +1865,7 @@ export default function DashboardPage() {
                                     if (footer) footer.remove();
                                     const closeBtn = clone.querySelector('.invoice-close-btn');
                                     if (closeBtn) closeBtn.remove();
-                                    
+
                                     // Add temporary wrapper for clean render
                                     const wrapper = document.createElement('div');
                                     wrapper.appendChild(clone);
@@ -1875,7 +1878,7 @@ export default function DashboardPage() {
                                         const html2pdf = (await import('html2pdf.js')).default;
                                         const safeSpaceTitle = invoiceBooking.SpaceTitle?.replace(/\s+/g, '_') || 'Space';
                                         const filename = `Booking_${invoiceBooking.BookingID}_${safeSpaceTitle}.pdf`;
-                                        
+
                                         await html2pdf().set({
                                             margin: 10,
                                             filename: filename,
@@ -1921,40 +1924,40 @@ export default function DashboardPage() {
                             )}
 
                             {!favoritesLoading && favorites.map(space => (
-                                    <div
-                                        key={space.SpaceID}
-                                        style={{
-                                            border: '1px solid #e2e8f0',
-                                            borderRadius: '12px',
-                                            padding: '12px',
-                                            marginBottom: '10px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                        }}
-                                    >
-                                        {/* Thumbnail */}
-                                        <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            {space.FirstImageID ? (
-                                                <img 
-                                                    src={`/api/images/space/${space.FirstImageID}`} 
-                                                    alt={space.Title} 
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                />
-                                            ) : (
-                                                <i className="fa-solid fa-image" style={{ color: '#a0aec0' }}></i>
-                                            )}
-                                        </div>
+                                <div
+                                    key={space.SpaceID}
+                                    style={{
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '12px',
+                                        padding: '12px',
+                                        marginBottom: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                    }}
+                                >
+                                    {/* Thumbnail */}
+                                    <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {space.FirstImageID ? (
+                                            <img
+                                                src={`/api/images/space/${space.FirstImageID}`}
+                                                alt={space.Title}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
+                                        ) : (
+                                            <i className="fa-solid fa-image" style={{ color: '#a0aec0' }}></i>
+                                        )}
+                                    </div>
 
-                                        <div style={{ flex: 1 }}>
-                                            <h4 style={{ margin: '0 0 4px 0', color: '#1a365d', fontSize: '15px' }}>{space.Title}</h4>
-                                            <p style={{ margin: 0, color: '#718096', fontSize: '13px' }}>
-                                                {space.City} {space.AddressLine1 ? `, ${space.AddressLine1}` : ''}
-                                            </p>
-                                            <p style={{ margin: '6px 0 0 0', color: '#ff6b35', fontSize: '13px', fontWeight: 700 }}>
-                                                <i className="fa-solid fa-heart"></i> {Number(space.FavoriteCount || 0)}
-                                            </p>
-                                        </div>
+                                    <div style={{ flex: 1 }}>
+                                        <h4 style={{ margin: '0 0 4px 0', color: '#1a365d', fontSize: '15px' }}>{space.Title}</h4>
+                                        <p style={{ margin: 0, color: '#718096', fontSize: '13px' }}>
+                                            {space.City} {space.AddressLine1 ? `, ${space.AddressLine1}` : ''}
+                                        </p>
+                                        <p style={{ margin: '6px 0 0 0', color: '#ff6b35', fontSize: '13px', fontWeight: 700 }}>
+                                            <i className="fa-solid fa-heart"></i> {Number(space.FavoriteCount || 0)}
+                                        </p>
+                                    </div>
 
                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                         <button
@@ -1965,13 +1968,13 @@ export default function DashboardPage() {
                                         </button>
 
                                         <button
-                                        className="btn btn-dark btn-small"
-                                        onClick={() => {
-                                            sessionStorage.setItem('openSpaceId', String(space.SpaceID));
-                                            window.location.href = '/search';
-                                        }}
+                                            className="btn btn-dark btn-small"
+                                            onClick={() => {
+                                                sessionStorage.setItem('openSpaceId', String(space.SpaceID));
+                                                window.location.href = '/search';
+                                            }}
                                         >
-                                        View Details
+                                            {t.viewDetails}
                                         </button>
                                     </div>
                                 </div>
