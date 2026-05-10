@@ -1596,10 +1596,10 @@ export default function SearchPage() {
                 <div className="container">
                     <div className="footer-content">
                         <div className="social-icons">
-                            <a href="#" aria-label="Facebook"><i className="fa-brands fa-facebook"></i></a>
-                            <a href="#" aria-label="LinkedIn"><i className="fa-brands fa-linkedin-in"></i></a>
-                            <a href="#" aria-label="X"><i className="fa-brands fa-x-twitter"></i></a>
-                            <a href="#" aria-label="Instagram"><i className="fa-brands fa-instagram"></i></a>
+                            <a href="#" aria-label={t.facebook}><i className="fa-brands fa-facebook"></i></a>
+                            <a href="#" aria-label={t.linkedin}><i className="fa-brands fa-linkedin-in"></i></a>
+                            <a href="#" aria-label={t.x}><i className="fa-brands fa-x-twitter"></i></a>
+                            <a href="#" aria-label={t.instagram}><i className="fa-brands fa-instagram"></i></a>
                         </div>
                         <div className="footer-logo">
                             <img src="/Media/Logo.png" alt="Si'aa Logo" className="footer-logo-img" />

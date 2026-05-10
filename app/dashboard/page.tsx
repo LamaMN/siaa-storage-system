@@ -1907,7 +1907,7 @@ export default function DashboardPage() {
                 <div className="review-modal-overlay" style={{ zIndex: 3000 }}>
                     <div className="review-modal" style={{ maxWidth: '720px', width: '92%' }}>
                         <div className="review-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3>My Favorite Spaces</h3>
+                            <h3>{t.myFavoriteSpaces}</h3>
                             <button
                                 onClick={() => setShowFavorites(false)}
                                 style={{ border: 'none', background: 'transparent', fontSize: '24px', cursor: 'pointer' }}
@@ -1920,7 +1920,7 @@ export default function DashboardPage() {
                             {favoritesLoading && <Loader />}
 
                             {!favoritesLoading && favorites.length === 0 && (
-                                <p style={{ color: '#718096' }}>No favorite spaces yet.</p>
+                                <p style={{ color: '#718096' }}>{t.noFavoriteSpaces}</p>
                             )}
 
                             {!favoritesLoading && favorites.map(space => (
@@ -1964,7 +1964,7 @@ export default function DashboardPage() {
                                             className="btn btn-outline btn-small"
                                             onClick={() => removeFavorite(space.SpaceID)}
                                         >
-                                            Remove
+                                            {t.remove}
                                         </button>
 
                                         <button
