@@ -5,7 +5,7 @@ import {
     findSeekerById, findProviderById,
     updateSeekerLastLogin, updateProviderLastLogin,
 } from '@/repositories/user.repository';
-import { signToken, verifyPassword } from '@/lib/auth';
+import { signToken, verifyPassword, needsRehash, hashPassword } from '@/lib/auth';
 import type { TokenPayload } from '@/lib/auth';
 
 // ============================================================
@@ -166,6 +166,13 @@ export async function login(
                 throw new Error(`Account is ${seeker.AccountStatus.toLowerCase()}. Please contact support.`);
             }
 
+            // Auto-upgrade legacy SHA-256 hash to bcrypt
+            if (needsRehash(seeker.Password)) {
+                const { execute } = await import('@/lib/db');
+                const newHash = await hashPassword(data.password);
+                execute('UPDATE StorageSeekers SET Password = @password WHERE SeekerID = @id', { password: newHash, id: seeker.SeekerID }).catch(() => {});
+            }
+
             await updateSeekerLastLogin(seeker.SeekerID);
 
             const isFirstLogin = !seeker.UpdatedAt ||
@@ -202,6 +209,13 @@ export async function login(
         if (valid) {
             if (provider.AccountStatus !== 'Active') {
                 throw new Error(`Account is ${provider.AccountStatus.toLowerCase()}. Please contact support.`);
+            }
+
+            // Auto-upgrade legacy SHA-256 hash to bcrypt
+            if (needsRehash(provider.Password)) {
+                const { execute } = await import('@/lib/db');
+                const newHash = await hashPassword(data.password);
+                execute('UPDATE StorageProviders SET Password = @password WHERE ProviderID = @id', { password: newHash, id: provider.ProviderID }).catch(() => {});
             }
 
             await updateProviderLastLogin(provider.ProviderID);

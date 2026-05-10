@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
+import bcrypt from 'bcryptjs';
 import { createHash } from 'crypto';
 
 const JWT_SECRET = new TextEncoder().encode(
@@ -6,6 +7,8 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 
 const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '7d';
+
+const BCRYPT_ROUNDS = 10;
 
 export interface TokenPayload extends JWTPayload {
     id: number;
@@ -40,18 +43,37 @@ export async function verifyToken(token: string): Promise<TokenPayload> {
 }
 
 /**
- * Hash a password using SHA-256 (matches existing DB hashes)
+ * Hash a password using bcrypt
  */
 export async function hashPassword(plain: string): Promise<string> {
-    return createHash('sha256').update(plain).digest('hex');
+    return bcrypt.hash(plain, BCRYPT_ROUNDS);
 }
 
 /**
- * Compare a plain text password against a SHA-256 hash
+ * Verify a plain text password against a stored hash.
+ * Supports both bcrypt ($2a$/$2b$ prefix) and legacy SHA-256 hashes.
+ * Returns { valid, needsRehash } so callers can upgrade old hashes.
  */
-export async function verifyPassword(plain: string, hash: string): Promise<boolean> {
-    const hashed = createHash('sha256').update(plain).digest('hex');
-    return hashed === hash;
+export async function verifyPassword(
+    plain: string,
+    storedHash: string
+): Promise<boolean> {
+    // Detect bcrypt hash (starts with $2a$ or $2b$)
+    if (storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$')) {
+        return bcrypt.compare(plain, storedHash);
+    }
+
+    // Legacy SHA-256 fallback — compare hex digests
+    const sha256Hash = createHash('sha256').update(plain).digest('hex');
+    return sha256Hash === storedHash;
+}
+
+/**
+ * Check if a stored hash is using the legacy SHA-256 format
+ * and should be upgraded to bcrypt.
+ */
+export function needsRehash(storedHash: string): boolean {
+    return !storedHash.startsWith('$2a$') && !storedHash.startsWith('$2b$');
 }
 
 /**
