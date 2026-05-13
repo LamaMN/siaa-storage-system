@@ -22,9 +22,11 @@ function friendlyError(raw: string, t: any): string {
         return t.passwordMinLength;
     if (r.includes('valid email'))
         return t.validEmailError;
-    if (r.includes('national id must be 10'))
+    if (r.includes('national id must be 10') || r.includes('national id'))
         return t.nationalIdFormatError;
-    if (r.includes('phone') || r.includes('phoneNumber'))
+    if (r.includes('national') && (r.includes('already') || r.includes('duplicate') || r.includes('unique')))
+        return t.nationalIdAlreadyRegistered;
+    if (r.includes('phone') || r.includes('phonenumber') || r.includes('start with 5'))
         return t.validSaudiPhoneError;
     if (r.includes('passwords do not match'))
         return t.passwordsDoNotMatch;

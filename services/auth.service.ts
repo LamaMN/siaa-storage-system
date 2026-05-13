@@ -15,9 +15,9 @@ import type { TokenPayload } from '@/lib/auth';
 export const registerSeekerSchema = z.object({
     email: z.string().email('Valid email required'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
-    firstName: z.string().min(1).max(100),
-    lastName: z.string().min(1).max(100),
-    phoneNumber: z.string().min(9).max(20),
+    firstName: z.string().min(1, 'First name is required').max(100),
+    lastName: z.string().min(1, 'Last name is required').max(100),
+    phoneNumber: z.string().regex(/^(\+966)?5\d{8}$/, 'Phone number must start with 5 followed by 8 digits (e.g. 5XXXXXXXX)'),
     dateOfBirth: z.string().refine((d) => {
         if (isNaN(Date.parse(d))) return false;
         const dob = new Date(d);
@@ -34,9 +34,9 @@ export const registerSeekerSchema = z.object({
 export const registerProviderSchema = z.object({
     email: z.string().email('Valid email required'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
-    firstName: z.string().min(1).max(100),
-    lastName: z.string().min(1).max(100),
-    phoneNumber: z.string().min(9).max(20),
+    firstName: z.string().min(1, 'First name is required').max(100),
+    lastName: z.string().min(1, 'Last name is required').max(100),
+    phoneNumber: z.string().regex(/^(\+966)?5\d{8}$/, 'Phone number must start with 5 followed by 8 digits (e.g. 5XXXXXXXX)'),
     dateOfBirth: z.string().refine((d) => {
         if (isNaN(Date.parse(d))) return false;
         const dob = new Date(d);
